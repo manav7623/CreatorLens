@@ -1,9 +1,9 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Mail, Key, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Mail, Key, Lock, Eye, EyeOff, ArrowLeft, Clock } from 'lucide-react';
 import api from '@/lib/api';
 
 function ResetPasswordForm() {
@@ -17,6 +17,43 @@ function ResetPasswordForm() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const handleResendOTP = async () => {
+    if (!email.trim()) {
+      toast.error('Email address is required to resend OTP.');
+      return;
+    }
+    setResending(true);
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
+      toast.success('New OTP sent successfully!');
+      if (data.otp) {
+        toast.success(`[Mock Mode] Your OTP is: ${data.otp}`, { duration: 10000 });
+      }
+      setTimeLeft(600); // Reset timer back to 10 minutes
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to resend OTP.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,6 +70,11 @@ function ResetPasswordForm() {
 
     if (otp.trim().length !== 6 || isNaN(otp.trim())) {
       toast.error('OTP must be a 6-digit number.');
+      return;
+    }
+
+    if (timeLeft <= 0) {
+      toast.error('OTP has expired. Please request a new code.');
       return;
     }
 
@@ -59,6 +101,9 @@ function ResetPasswordForm() {
       setLoading(false);
     }
   };
+
+  // Cooldown is 60 seconds (from 600 down to 540)
+  const canResend = timeLeft <= 540;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -96,6 +141,28 @@ function ResetPasswordForm() {
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
             <Key size={18} />
           </div>
+        </div>
+
+        {/* OTP Countdown & Resend Code Timer */}
+        <div className="flex items-center justify-between mt-2 px-1">
+          <div className="flex items-center gap-1.5 text-xs">
+            <Clock size={13} className={timeLeft > 60 ? "text-amber-400" : "text-red-500 animate-pulse"} />
+            <span className={timeLeft > 60 ? "text-gray-400 font-medium" : "text-red-400 font-semibold"}>
+              {timeLeft > 0 ? `Expires in: ${formatTime(timeLeft)}` : 'OTP Expired'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleResendOTP}
+            disabled={resending || !canResend}
+            className={`text-xs font-semibold transition-colors ${
+              !canResend
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-primary-400 hover:text-primary-300'
+            }`}
+          >
+            {resending ? 'Resending...' : !canResend ? `Resend in ${timeLeft - 540}s` : 'Resend OTP'}
+          </button>
         </div>
       </div>
 
