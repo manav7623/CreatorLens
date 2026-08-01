@@ -42,7 +42,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-6">
-          
+
             <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 30, background: 'linear-gradient(135deg, #4F63FF, #FFD166)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CreatorLens</span>
           </Link>
           <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
@@ -56,26 +56,42 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   type="email"
-                  className="input-field pl-10"
+                  className="input-field"
+                  style={{ paddingLeft: '2.75rem' }}
                   placeholder="you@example.com"
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
                   required
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <Mail size={18} />
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Password</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm text-gray-400">Password</label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-primary-500 hover:text-primary-400 font-semibold"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
-                  className="input-field pl-10 pr-10"
+                  className="input-field"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
                   placeholder="••••••••"
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   required
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <Lock size={18} />
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
@@ -97,27 +113,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo accounts */}
-          {/* <div className="mt-6 p-4 bg-dark-700 rounded-xl">
-            <p className="text-xs text-gray-500 mb-3 font-mono">DEMO ACCOUNTS</p>
-            <div className="space-y-2">
-              {[
-                { role: 'Brand', email: 'brand@demo.com', pass: 'demo123' },
-                { role: 'Creator', email: 'creator@demo.com', pass: 'demo123' },
-                { role: 'Admin', email: 'admin@demo.com', pass: 'demo123' },
-              ].map(({ role, email, pass }) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => setForm({ email, password: pass })}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-dark-600 hover:bg-dark-500 transition-colors text-sm"
-                >
-                  <span className="text-primary-500 font-semibold">{role}</span>
-                  <span className="text-gray-500 ml-2 font-mono text-xs">{email}</span>
-                </button>
-              ))}
-            </div>
-          </div> */}
 
           <p className="text-center text-gray-500 text-sm mt-6">
             Don't have an account?{' '}

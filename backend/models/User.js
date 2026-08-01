@@ -49,6 +49,14 @@ const User = sequelize.define('User', {
   brandProfile: {
     type: DataTypes.JSON,
     defaultValue: {}
+  },
+  resetPasswordToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  resetPasswordExpires: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   hooks: {

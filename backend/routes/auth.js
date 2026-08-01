@@ -115,4 +115,71 @@ router.get('/me', auth, async (req, res) => {
   res.json({ user: req.user });
 });
 
+
+const { sendResetPasswordOTPEmail } = require('../utils/email');
+
+// Forgot Password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: 'User does not exist, sorry.' });
+    }
+
+    // Generate a 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Save to user DB
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = new Date(Date.now() + 600000); // 10 minutes from now
+    await user.save();
+
+    // Send email
+    const emailResult = await sendResetPasswordOTPEmail(user.email, otp);
+
+    let message = 'We have sent a 6-digit OTP code to your email.';
+    if (emailResult.mock) {
+      message = `Mock Mode: OTP generated: ${emailResult.otp}. Use this to reset password.`;
+    }
+
+    res.json({ message, mockUrl: emailResult.resetUrl, otp: emailResult.otp });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, password } = req.body;
+    if (!email || !otp || !password) {
+      return res.status(400).json({ error: 'Email, OTP code, and new password are required' });
+    }
+
+    const emailCheck = await User.findOne({ email });
+    if (!emailCheck) {
+      return res.status(404).json({ error: 'Email is not exist' });
+    }
+
+    const user = await User.findOne({ email, resetPasswordToken: otp });
+
+    if (!user || !user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) {
+      return res.status(400).json({ error: 'OTP code is invalid or has expired.' });
+    }
+
+    // Update password
+    user.password = password; // Hook will automatically hash it
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

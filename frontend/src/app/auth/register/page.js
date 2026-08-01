@@ -84,12 +84,16 @@ function RegisterForm() {
               <div className="relative">
                 <input
                   type="text"
-                  className="input-field pl-10"
+                  className="input-field"
+                  style={{ paddingLeft: '2.75rem' }}
                   placeholder="Virat Kohli"
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   required
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <User size={18} />
+                </div>
               </div>
             </div>
 
@@ -98,12 +102,16 @@ function RegisterForm() {
               <div className="relative">
                 <input
                   type="email"
-                  className="input-field pl-10"
+                  className="input-field"
+                  style={{ paddingLeft: '2.75rem' }}
                   placeholder="virat@example.com"
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
                   required
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <Mail size={18} />
+                </div>
               </div>
             </div>
 
@@ -112,12 +120,16 @@ function RegisterForm() {
               <div className="relative">
                 <input
                   type="password"
-                  className="input-field pl-10"
+                  className="input-field"
+                  style={{ paddingLeft: '2.75rem' }}
                   placeholder="Min 6 characters"
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   required
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <Lock size={18} />
+                </div>
               </div>
             </div>
 
