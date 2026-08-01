@@ -8,7 +8,7 @@ AI-powered marketplace connecting brands and creators with smart analytics and s
 
 ```
 brandcreator/
-├── backend/          ← Node.js + Express + MongoDB API
+├── backend/          ← Node.js + Express + MySQL API
 │   ├── models/       ← Database schemas (User, Campaign, Application, Message)
 │   ├── routes/       ← API endpoints
 │   ├── middleware/   ← JWT auth middleware
@@ -34,9 +34,9 @@ brandcreator/
 ### STEP 1: Install Requirements
 You need:
 - **Node.js** (v18+): Download from https://nodejs.org
-- **MongoDB**: 
-  - Option A: Install locally from https://mongodb.com
-  - Option B: Use MongoDB Atlas (free cloud): https://mongodb.com/atlas
+- **MySQL**: 
+  - Option A: Install locally (e.g. MySQL Community Server) from https://dev.mysql.com/downloads/installer/
+  - Option B: Use a cloud MySQL database service (e.g. Aiven, PlanetScale, Railway, etc.)
 
 ### STEP 2: Setup Backend
 
@@ -56,12 +56,16 @@ cp .env.example .env
 Edit `.env` file:
 ```
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/brandcreator
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASS=
+DB_NAME=brandcreator
 JWT_SECRET=change_this_to_any_random_string_like_abc123xyz
 CLIENT_URL=http://localhost:3000
 ```
 
-If using MongoDB Atlas, replace MONGODB_URI with your Atlas connection string.
+If using a cloud database, replace the DB_host, user, password, and port with your connection details.
 
 ```bash
 # Seed demo data (creates demo accounts)
@@ -73,8 +77,9 @@ npm run dev
 
 You should see:
 ```
-MongoDB Connected
-Server running on port 5000
+✅ MySQL Database "brandcreator" verified/created successfully.
+✅ MySQL Database & Tables Connected/Synced
+🚀 Server running on port 5000
 ```
 
 ### STEP 3: Setup Frontend
@@ -104,11 +109,19 @@ Go to: **http://localhost:3000**
 
 ## Demo Accounts
 
-| Role    | Email               | Password |
-|---------|---------------------|----------|
-| Brand   | brand@demo.com      | demo123  |
-| Creator | creator@demo.com    | demo123  |
-| Admin   | admin@demo.com      | demo123  |
+All seeded demo accounts use the password `MD123456`.
+
+| Role      | Email               | Password |
+|-----------|---------------------|----------|
+| Brand 1   | brand@demo.com      | MD123456 |
+| Brand 2   | nike@demo.com       | MD123456 |
+| Brand 3   | zomato@demo.com     | MD123456 |
+| Creator 1 | md@demo.com         | MD123456 |
+| Creator 2 | krish@demo.com      | MD123456 |
+| Creator 3 | tamanna@demo.com    | MD123456 |
+| Creator 4 | harshita@demo.com   | MD123456 |
+| Creator 5 | manav@demo.com      | MD123456 |
+| Admin     | admin@demo.com      | MD123456 |
 
 ---
 
@@ -193,7 +206,7 @@ PUT  /api/admin/users/:id/verify - Verify user
 2. Import to Vercel
 3. Set NEXT_PUBLIC_API_URL to your Render URL
 
-**Database** → MongoDB Atlas (free 512MB)
+**Database** → MySQL (e.g. Aiven, Railway, or PlanetScale)
 
 ---
 
@@ -203,7 +216,7 @@ PUT  /api/admin/users/:id/verify - Verify user
 |----------|-------------------------|
 | Frontend | Next.js 14, Tailwind CSS, Redux Toolkit |
 | Backend  | Node.js, Express.js     |
-| Database | MongoDB + Mongoose      |
+| Database | MySQL + Sequelize (with Mongoose-like compatibility) |
 | Realtime | Socket.IO               |
 | Auth     | JWT                     |
 | Charts   | Recharts                |
