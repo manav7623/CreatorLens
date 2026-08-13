@@ -53,7 +53,7 @@ function ReviewModal({ submission, onClose, onAction }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="glass rounded-3xl p-8 w-full max-w-xl">
+      <div className="glass rounded-3xl p-8 w-full max-w-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Review Content</h2>
           <button onClick={onClose}><X size={22} className="text-gray-400 hover:text-white" /></button>
