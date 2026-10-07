@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Search, Shield, Zap, Users, TrendingUp, MapPin, Instagram, Youtube, Twitter } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Shield, Zap, Users, TrendingUp, MapPin, Instagram, Youtube, Twitter, MessageSquare } from 'lucide-react';
 
 const NICHES = ['Tech', 'Fashion', 'Travel', 'Food', 'Fitness', 'Beauty', 'Gaming', 'Education', 'Finance', 'Lifestyle'];
 
@@ -12,6 +13,7 @@ function CreatorCard({ creator }) {
   const score = p.aiScore || 0;
   const scoreColor = score >= 75 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
   const scoreBg = score >= 75 ? 'bg-green-500/20' : score >= 50 ? 'bg-yellow-500/20' : 'bg-red-500/20';
+  const creatorId = creator._id || creator.id;
 
   return (
     <>
@@ -69,24 +71,34 @@ function CreatorCard({ creator }) {
           </div>
         </div>
 
-        {/* Social Links */}
-        <div className="flex gap-3 items-center text-gray-400">
-          {p.socialLinks?.instagram?.username && (
-            <div className="flex items-center gap-1 text-xs">
-              <Instagram size={12} className="text-pink-400" />
-              @{p.socialLinks.instagram.username}
-            </div>
-          )}
-          {p.socialLinks?.youtube?.username && (
-            <div className="flex items-center gap-1 text-xs">
-              <Youtube size={12} className="text-red-400" />
-              {p.socialLinks.youtube.username}
-            </div>
-          )}
+        {/* Social Links & Message Button */}
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-dark-600">
+          <div className="flex gap-3 items-center text-gray-400">
+            {p.socialLinks?.instagram?.username && (
+              <div className="flex items-center gap-1 text-xs">
+                <Instagram size={12} className="text-pink-400" />
+                @{p.socialLinks.instagram.username}
+              </div>
+            )}
+            {p.socialLinks?.youtube?.username && (
+              <div className="flex items-center gap-1 text-xs">
+                <Youtube size={12} className="text-red-400" />
+                {p.socialLinks.youtube.username}
+              </div>
+            )}
+          </div>
+
+          <Link
+            href={`/messages?user=${creatorId}`}
+            onClick={e => e.stopPropagation()}
+            className="btn-primary text-xs py-1.5 px-3 rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95"
+          >
+            <MessageSquare size={13} /> Message
+          </Link>
         </div>
 
         {p.rateCard?.postRate > 0 && (
-          <div className="mt-3 pt-3 border-t border-dark-600 flex gap-4 text-xs text-gray-400">
+          <div className="mt-3 pt-2 border-t border-dark-700/60 flex gap-4 text-xs text-gray-400">
             <span>Post: <span className="text-accent-400 font-semibold">₹{p.rateCard.postRate?.toLocaleString()}</span></span>
             {p.rateCard.videoRate > 0 && (
               <span>Video: <span className="text-accent-400 font-semibold">₹{p.rateCard.videoRate?.toLocaleString()}</span></span>
@@ -99,19 +111,28 @@ function CreatorCard({ creator }) {
       {showDetail && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(false)}>
           <div className="glass rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start gap-4 mb-6">
-              <img
-                src={creator.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=4F63FF&color=fff&size=80`}
-                className="w-20 h-20 rounded-2xl"
-              />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold">{creator.name}</h2>
-                  {creator.isVerified && <Shield size={18} className="text-green-400" />}
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div className="flex items-start gap-4">
+                <img
+                  src={creator.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=4F63FF&color=fff&size=80`}
+                  className="w-20 h-20 rounded-2xl object-cover ring-1 ring-primary-500/30"
+                />
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-2xl font-bold">{creator.name}</h2>
+                    {creator.isVerified && <Shield size={18} className="text-green-400" />}
+                  </div>
+                  {p.location && <div className="text-gray-400 text-sm flex items-center gap-1"><MapPin size={14} />{p.location}</div>}
+                  <p className="text-gray-300 text-sm mt-2">{p.bio}</p>
                 </div>
-                {p.location && <div className="text-gray-400 text-sm flex items-center gap-1"><MapPin size={14} />{p.location}</div>}
-                <p className="text-gray-300 text-sm mt-2">{p.bio}</p>
               </div>
+
+              <Link
+                href={`/messages?user=${creatorId}`}
+                className="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-md flex-shrink-0"
+              >
+                <MessageSquare size={15} /> Message Creator
+              </Link>
             </div>
 
             {/* Detailed Analytics */}
@@ -151,7 +172,7 @@ function CreatorCard({ creator }) {
             )}
 
             {/* Social Platforms */}
-            <div className="mb-4">
+            <div className="mb-6">
               <h4 className="font-semibold mb-3 text-sm text-gray-400">SOCIAL PLATFORMS</h4>
               <div className="grid grid-cols-2 gap-2">
                 {p.socialLinks?.instagram?.username && (
@@ -175,7 +196,12 @@ function CreatorCard({ creator }) {
               </div>
             </div>
 
-            <button onClick={() => setShowDetail(false)} className="btn-secondary w-full">Close</button>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDetail(false)} className="btn-secondary flex-1">Close</button>
+              <Link href={`/messages?user=${creatorId}`} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                <MessageSquare size={16} /> Chat Directly
+              </Link>
+            </div>
           </div>
         </div>
       )}

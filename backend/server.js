@@ -91,17 +91,18 @@ io.on('connection', (socket) => {
   socket.on('sendMessage', async (data) => {
     const { receiverId, message, senderId, conversationId } = data;
     const receiverRoom = String(receiverId);
+    const senderRoom = String(senderId);
     console.log(`[Socket.IO] sendMessage socket event from ${senderId} to ${receiverRoom}`);
     
-    // Emit to receiver if online
-    if (connectedUsers[receiverRoom]) {
-      io.to(connectedUsers[receiverRoom]).emit('receiveMessage', {
-        senderId,
-        message,
-        conversationId,
-        timestamp: new Date()
-      });
-    }
+    const payload = {
+      senderId,
+      message,
+      conversationId,
+      timestamp: new Date()
+    };
+
+    io.to(receiverRoom).to(senderRoom).emit('receiveMessage', payload);
+    io.to(receiverRoom).to(senderRoom).emit('receive_message', payload);
   });
 
   socket.on('disconnect', () => {

@@ -7,7 +7,8 @@ const auth = async (req, res, next) => {
     if (!token) return res.status(401).json({ error: 'No token provided' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    const user = await User.findById(decoded.userId).select('-password');
+    const userId = decoded.userId || decoded.id || decoded._id;
+    const user = await User.findById(userId).select('-password');
     
     if (!user) return res.status(401).json({ error: 'User not found' });
     if (user.isBanned) return res.status(403).json({ error: 'Account banned' });

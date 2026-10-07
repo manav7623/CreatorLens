@@ -34,11 +34,19 @@ const upload = multer({
   }
 });
 
-// 1. GET /conversations - List all chat channels for current user's applications
+// Helper: build consistent direct conversation ID for two users
+function getDirectConvId(userA, userB) {
+  const min = Math.min(Number(userA), Number(userB));
+  const max = Math.max(Number(userA), Number(userB));
+  return `direct_${min}_${max}`;
+}
+
+// 1. GET /conversations - List all chat channels (Applications + Direct Chats)
 router.get('/conversations', auth, async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
+    const userId = Number(req.user.id || req.user._id);
 
+    // 1. Fetch all applications (deal chats)
     let applications = [];
     if (Application.findAll) {
       applications = await Application.findAll({
@@ -49,33 +57,139 @@ router.get('/conversations', auth, async (req, res) => {
           ]
         },
         include: [
-          { model: User, as: 'creator', attributes: ['id', '_id', 'name', 'avatar', 'role', 'creatorProfile'] },
-          { model: User, as: 'brand', attributes: ['id', '_id', 'name', 'avatar', 'role', 'brandProfile'] },
-          { model: Campaign, as: 'campaign', attributes: ['id', '_id', 'title', 'budget', 'deliverables', 'status'] }
+          { model: User, as: 'creator', attributes: ['id', 'name', 'avatar', 'role', 'creatorProfile'] },
+          { model: User, as: 'brand', attributes: ['id', 'name', 'avatar', 'role', 'brandProfile'] },
+          { model: Campaign, as: 'campaign', attributes: ['id', 'title', 'budget', 'deliverables', 'status'] }
         ],
         order: [['updatedAt', 'DESC']]
       });
-    } else {
-      applications = await Application.find({
-        $or: [{ creator: userId }, { brand: userId }]
-      })
-        .populate('creator', 'name avatar role creatorProfile')
-        .populate('brand', 'name avatar role brandProfile')
-        .populate('campaign', 'title budget deliverables status')
-        .sort({ updatedAt: -1 });
     }
 
-    res.json({ conversations: applications });
+    const appConversations = applications.map(app => {
+      const json = app.toJSON ? app.toJSON() : app;
+      return {
+        ...json,
+        id: json.id,
+        _id: json.id,
+        isDirect: false,
+        conversationId: String(json.id)
+      };
+    });
+
+    const appIds = new Set(appConversations.map(a => String(a.id)));
+
+    // 2. Fetch all direct conversations from Messages table
+    let directMessages = [];
+    if (Message.findAll) {
+      directMessages = await Message.findAll({
+        where: {
+          [Op.or]: [
+            { senderId: userId },
+            { receiverId: userId }
+          ]
+        },
+        include: [
+          { model: User, as: 'sender', attributes: ['id', 'name', 'avatar', 'role', 'creatorProfile', 'brandProfile'] },
+          { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar', 'role', 'creatorProfile', 'brandProfile'] }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+    }
+
+    // Group direct messages by conversationId
+    const directMap = new Map();
+    for (const msg of directMessages) {
+      const convId = String(msg.conversationId);
+      // Skip if this message belongs to an application deal chat
+      if (appIds.has(convId) || (!convId.startsWith('direct_') && !isNaN(convId) && appIds.has(convId))) {
+        continue;
+      }
+
+      if (!directMap.has(convId)) {
+        const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+        if (!otherUser) continue;
+
+        const otherJson = otherUser.toJSON ? otherUser.toJSON() : otherUser;
+        const msgJson = msg.toJSON ? msg.toJSON() : msg;
+
+        directMap.set(convId, {
+          id: convId,
+          _id: convId,
+          conversationId: convId,
+          isDirect: true,
+          status: 'active',
+          otherUser: {
+            ...otherJson,
+            id: otherJson.id,
+            _id: otherJson.id
+          },
+          creator: otherJson.role === 'creator' ? otherJson : (req.user.role === 'creator' ? req.user : null),
+          brand: otherJson.role === 'brand' ? otherJson : (req.user.role === 'brand' ? req.user : null),
+          campaign: {
+            title: `Direct Chat: ${otherJson.name}`,
+            status: 'active'
+          },
+          lastMessage: msgJson,
+          updatedAt: msg.createdAt
+        });
+      }
+    }
+
+    const directConversations = Array.from(directMap.values());
+
+    // Merge and sort by most recent activity
+    const allConversations = [...appConversations, ...directConversations].sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+    res.json({ conversations: allConversations });
   } catch (err) {
     console.error('Error fetching conversations:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. GET /unread/count - Get unread count
+// 2. GET /search/users - Search users (creators/brands) to start a new chat
+router.get('/search/users', auth, async (req, res) => {
+  try {
+    const userId = Number(req.user.id || req.user._id);
+    const { q = '' } = req.query;
+
+    const whereClause = {
+      id: { [Op.ne]: userId },
+      isBanned: false,
+      isActive: true
+    };
+
+    if (q.trim()) {
+      whereClause.name = { [Op.like]: `%${q.trim()}%` };
+    }
+
+    const users = await User.findAll({
+      where: whereClause,
+      attributes: ['id', 'name', 'avatar', 'role', 'creatorProfile', 'brandProfile'],
+      limit: 20
+    });
+
+    res.json({
+      users: users.map(u => ({
+        ...u.toJSON ? u.toJSON() : u,
+        id: u.id,
+        _id: u.id
+      }))
+    });
+  } catch (err) {
+    console.error('Error searching chat users:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. GET /unread/count - Get unread message count
 router.get('/unread/count', auth, async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
+    const userId = Number(req.user.id || req.user._id);
     let count = 0;
     if (Message.count) {
       count = await Message.count({
@@ -84,11 +198,6 @@ router.get('/unread/count', auth, async (req, res) => {
           isRead: false
         }
       });
-    } else {
-      count = await Message.countDocuments({
-        receiver: userId,
-        isRead: false
-      });
     }
     res.json({ count });
   } catch (err) {
@@ -96,15 +205,41 @@ router.get('/unread/count', auth, async (req, res) => {
   }
 });
 
-// 3. POST / - Send a new message (text or file attachment)
+// 4. POST / - Send a new message (text or media file)
 router.post('/', auth, upload.single('file'), async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
-    const { receiverId, message } = req.body;
-    const conversationId = String(req.body.applicationId || req.body.conversationId || req.body.appId);
+    const userId = Number(req.user.id || req.user._id);
+    let { receiverId, message } = req.body;
+    let conversationId = req.body.applicationId || req.body.conversationId || req.body.appId;
 
-    if (!conversationId || conversationId === 'undefined') {
-      return res.status(400).json({ error: 'Conversation / Application ID is required' });
+    if (conversationId === 'undefined' || conversationId === 'null') conversationId = null;
+
+    // Direct conversation via receiverId
+    if (!conversationId && receiverId) {
+      const recId = Number(receiverId);
+      conversationId = getDirectConvId(userId, recId);
+    }
+
+    // Resolve receiverId if missing
+    if (conversationId && !receiverId) {
+      if (String(conversationId).startsWith('direct_')) {
+        const parts = String(conversationId).replace('direct_', '').split('_').map(Number);
+        receiverId = parts[0] === userId ? parts[1] : parts[0];
+      } else {
+        // Find application
+        const app = await Application.findByPk(conversationId);
+        if (app) {
+          receiverId = (app.creatorId === userId) ? app.brandId : app.creatorId;
+        }
+      }
+    }
+
+    if (!conversationId) {
+      return res.status(400).json({ error: 'Conversation ID, Application ID, or Receiver ID is required' });
+    }
+
+    if (!receiverId || isNaN(Number(receiverId))) {
+      return res.status(400).json({ error: 'Could not determine message receiver' });
     }
 
     let fileUrl = req.body.fileUrl || null;
@@ -115,22 +250,22 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
       fileType = req.file.mimetype;
     }
 
-    const messageType = fileUrl ? 'media' : 'text';
+    const messageType = fileUrl ? 'media' : (req.body.messageType || 'text');
 
     const newMessage = await Message.create({
       conversationId: String(conversationId),
       senderId: userId,
-      receiverId: receiverId ? Number(receiverId) : null,
+      receiverId: Number(receiverId),
       message: message || '',
       messageType,
       fileUrl,
       fileType,
-      isRead: false,
+      isRead: false
     });
 
     const populatedSender = {
-      _id: userId,
       id: userId,
+      _id: userId,
       name: req.user.name,
       avatar: req.user.avatar,
       role: req.user.role
@@ -138,11 +273,12 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
 
     const messagePayload = {
       ...newMessage.toJSON ? newMessage.toJSON() : newMessage,
-      _id: newMessage.id || newMessage._id,
-      id: newMessage.id || newMessage._id,
+      id: newMessage.id,
+      _id: newMessage.id,
       sender: populatedSender,
       application: conversationId,
-      conversationId: conversationId
+      applicationId: conversationId,
+      conversationId: String(conversationId)
     };
 
     // Emit real-time Socket.IO event to receiver and sender rooms
@@ -163,18 +299,24 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
   }
 });
 
-// 4. GET /:conversationId - Get messages for a specific conversation
+// 5. GET /:conversationId - Get messages for a specific conversation
 router.get('/:conversationId', auth, async (req, res) => {
   try {
-    const convId = String(req.params.conversationId);
-    const userId = req.user.id || req.user._id;
+    let convId = String(req.params.conversationId);
+    const userId = Number(req.user.id || req.user._id);
+
+    // If param is a direct user format like "user_26", compute direct_X_Y
+    if (convId.startsWith('user_')) {
+      const targetUserId = Number(convId.replace('user_', ''));
+      convId = getDirectConvId(userId, targetUserId);
+    }
 
     let messages = [];
     if (Message.findAll) {
       messages = await Message.findAll({
         where: { conversationId: convId },
         include: [
-          { model: User, as: 'sender', attributes: ['id', '_id', 'name', 'avatar', 'role'] }
+          { model: User, as: 'sender', attributes: ['id', 'name', 'avatar', 'role'] }
         ],
         order: [['createdAt', 'ASC']]
       });
@@ -190,50 +332,45 @@ router.get('/:conversationId', auth, async (req, res) => {
           }
         }
       );
-    } else {
-      messages = await Message.find({ conversationId: convId })
-        .populate('sender', 'name avatar role')
-        .sort({ createdAt: 1 });
-
-      await Message.updateMany(
-        { conversationId: convId, receiver: userId, isRead: false },
-        { isRead: true }
-      );
     }
 
-    res.json({ messages });
+    res.json({
+      messages: messages.map(m => ({
+        ...m.toJSON ? m.toJSON() : m,
+        id: m.id,
+        _id: m.id,
+        sender: m.sender ? { ...m.sender.toJSON ? m.sender.toJSON() : m.sender, id: m.sender.id, _id: m.sender.id } : null
+      }))
+    });
   } catch (err) {
     console.error('Error getting messages:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 5. DELETE /conversation/:conversationId - Clear all chat in conversation
+// 6. DELETE /conversation/:conversationId - Clear all chat in conversation
 router.delete('/conversation/:conversationId', auth, async (req, res) => {
   try {
     const convId = String(req.params.conversationId);
-    const userId = String(req.user.id || req.user._id);
+    const userId = Number(req.user.id || req.user._id);
 
-    let app = null;
-    if (Application.findByPk) {
-      app = await Application.findByPk(convId);
-    }
-    if (!app && Application.findById) {
-      app = await Application.findById(convId);
-    }
-
-    if (app) {
-      const creatorId = String(app.creatorId || app.creator);
-      const brandId = String(app.brandId || app.brand);
-      if (userId !== creatorId && userId !== brandId && req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Unauthorized to clear this conversation' });
+    // If it is an application, verify authorization
+    if (!convId.startsWith('direct_')) {
+      let app = null;
+      if (Application.findByPk) {
+        app = await Application.findByPk(convId);
+      }
+      if (app) {
+        const creatorId = Number(app.creatorId || app.creator);
+        const brandId = Number(app.brandId || app.brand);
+        if (userId !== creatorId && userId !== brandId && req.user.role !== 'admin') {
+          return res.status(403).json({ error: 'Unauthorized to clear this conversation' });
+        }
       }
     }
 
     if (Message.destroy) {
       await Message.destroy({ where: { conversationId: convId } });
-    } else {
-      await Message.deleteMany({ conversationId: convId });
     }
 
     // Emit socket event to notify other party
@@ -248,30 +385,23 @@ router.delete('/conversation/:conversationId', auth, async (req, res) => {
   }
 });
 
-// 6. DELETE /:id - Delete individual message
+// 7. DELETE /:id - Delete individual message
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const userId = String(req.user.id || req.user._id);
+    const userId = Number(req.user.id || req.user._id);
     let message = null;
     if (Message.findByPk) {
       message = await Message.findByPk(req.params.id);
-    } else {
-      message = await Message.findById(req.params.id);
     }
 
     if (!message) return res.status(404).json({ error: 'Message not found' });
 
-    const senderId = String(message.senderId || message.sender);
+    const senderId = Number(message.senderId || message.sender);
     if (senderId !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'You can only delete your own messages' });
     }
 
-    if (message.destroy) {
-      await message.destroy();
-    } else {
-      await Message.findByIdAndDelete(req.params.id);
-    }
-
+    await message.destroy();
     res.json({ message: 'Message deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

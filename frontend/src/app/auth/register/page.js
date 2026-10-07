@@ -38,7 +38,7 @@ function RegisterForm() {
     }
     const result = await dispatch(register(form));
     if (result.meta.requestStatus === 'fulfilled') {
-      toast.success('Account created! Welcome to CollabBridge 🎉');
+      toast.success('Account created! Welcome to CreatorLens 🎉');
     }
   };
 

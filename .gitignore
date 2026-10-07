@@ -20,6 +20,19 @@ backend/.env
 backend/.env.local
 frontend/.env.local
 
+# Sensitive Credentials & PDF exports
+*Credentials*
+*credentials*
+database_credentials.html
+generate-credentials-pdf.js
+*.pdf
+
+# User Uploads
+backend/uploads/messages/*
+backend/uploads/content/*
+!backend/uploads/messages/.gitkeep
+!backend/uploads/content/.gitkeep
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -27,4 +40,4 @@ yarn-error.log*
 
 # OS Files
 .DS_Store
-Thumbs.db
+Thumbs.db

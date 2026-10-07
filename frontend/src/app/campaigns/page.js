@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Search, Filter, DollarSign, Calendar, Users, ChevronRight, Zap } from 'lucide-react';
+import { Search, Filter, DollarSign, Calendar, Users, ChevronRight, Zap, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useSelector } from 'react-redux';
@@ -92,9 +92,18 @@ function CampaignCard({ campaign }) {
         )}
 
         {user?.role === 'creator' && (
-          <button onClick={() => setShowModal(true)} className="btn-primary w-full text-sm">
-            Apply Now →
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowModal(true)} className="btn-primary flex-1 text-sm py-2.5 rounded-xl font-semibold">
+              Apply Now →
+            </button>
+            <Link
+              href={`/messages?user=${campaign.brandId || campaign.brand?.id || campaign.brand?._id}`}
+              className="btn-secondary text-xs px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 border border-dark-500 hover:border-primary-500 transition-colors"
+              title="Message Brand"
+            >
+              <MessageSquare size={14} className="text-primary-400" /> Chat
+            </Link>
+          </div>
         )}
       </div>
 
