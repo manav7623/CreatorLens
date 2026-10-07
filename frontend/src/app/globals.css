@@ -14,6 +14,13 @@
 html { scroll-behavior: smooth; }
 body { background: #0A0A0F; color: white; font-family: var(--font-syne); }
 
+button, a, [role="button"], select {
+  cursor: pointer;
+}
+input, textarea {
+  cursor: text;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #12121A; }
