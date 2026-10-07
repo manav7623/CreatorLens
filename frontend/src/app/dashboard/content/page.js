@@ -23,25 +23,29 @@ function SubmitModal({ application, onClose, onSuccess }) {
   const removeLink = (i) => setLinks(links.filter((_, idx) => idx !== i));
 
   const handleSubmit = async () => {
-    if (!form.title) { toast.error('Add a title'); return; }
-    if (links.every(l => !l.url) && files.length === 0) {
+    if (!form.title.trim()) { toast.error('Add a title'); return; }
+    if (links.every(l => !l.url?.trim()) && files.length === 0) {
       toast.error('Add at least one content link or file');
+      return;
+    }
+
+    const appId = application._id || application.id;
+    if (!appId) {
+      toast.error('Application not found');
       return;
     }
 
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('applicationId', application._id);
-      formData.append('title', form.title);
-      formData.append('description', form.description);
-      formData.append('deliverable', form.deliverable);
-      formData.append('contentLinks', JSON.stringify(links.filter(l => l.url)));
+      formData.append('applicationId', String(appId));
+      formData.append('title', form.title.trim());
+      formData.append('description', form.description?.trim() || '');
+      formData.append('deliverable', form.deliverable?.trim() || '');
+      formData.append('contentLinks', JSON.stringify(links.filter(l => l.url?.trim())));
       files.forEach(f => formData.append('files', f));
 
-      await api.post('/content/submit', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/content/submit', formData);
 
       toast.success('Content submitted! Brand will review it 🎉');
       onSuccess();
@@ -205,7 +209,7 @@ export default function CreatorContentPage() {
         api.get('/applications/my')
       ]);
       setSubmissions(subRes.data.submissions || []);
-      setAcceptedApps(appRes.data.applications?.filter(a => a.status === 'accepted') || []);
+      setAcceptedApps(appRes.data.applications?.filter(a => ['accepted', 'shortlisted', 'pending'].includes(a.status)) || []);
     } catch (err) {
       toast.error('Failed to load data');
     } finally {
@@ -224,29 +228,29 @@ export default function CreatorContentPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-1">My Content Submissions</h1>
-        <p className="text-gray-400">Upload and track your submitted content</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1">My Content Submissions</h1>
+        <p className="text-gray-400 text-sm">Upload and track your submitted content</p>
       </div>
 
       {/* Accepted campaigns ready to submit */}
       {acceptedApps.length > 0 && (
-        <div className="glass rounded-2xl p-6 border border-green-500/20">
+        <div className="glass rounded-2xl p-5 sm:p-6 border border-green-500/20">
           <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
             <CheckCircle size={18} className="text-green-400" />
-            Ready to Submit ({acceptedApps.length} active deals)
+            Ready to Submit ({acceptedApps.length} active deals/applications)
           </h3>
           <div className="space-y-3">
             {acceptedApps.map(app => (
-              <div key={app._id} className="bg-dark-700 rounded-xl p-4 flex items-center justify-between gap-4">
+              <div key={app._id || app.id} className="bg-dark-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="font-semibold">{app.campaign?.title || 'Campaign'}</div>
                   <div className="text-xs text-gray-400 mt-0.5">
-                    Brand: {app.brand?.name} • Deal: ₹{app.dealAmount?.toLocaleString() || app.proposedRate?.toLocaleString()}
+                    Brand: {app.brand?.name || 'Brand'} • Deal: ₹{app.dealAmount?.toLocaleString() || app.proposedRate?.toLocaleString()}
                   </div>
                 </div>
                 <button
                   onClick={() => { setSelectedApp(app); setShowModal(true); }}
-                  className="btn-primary text-sm flex items-center gap-2 whitespace-nowrap"
+                  className="btn-primary text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap self-start sm:self-auto px-4 py-2"
                 >
                   <Upload size={14} /> Submit Content
                 </button>

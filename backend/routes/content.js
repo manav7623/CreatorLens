@@ -39,23 +39,38 @@ router.post('/submit', auth, upload.array('files', 5), async (req, res) => {
       return res.status(403).json({ error: 'Only creators can submit content' });
     }
 
-    const { applicationId, title, description, contentLinks, deliverable } = req.body;
+    const { title, description, contentLinks, deliverable } = req.body;
+    const appId = req.body.applicationId || req.body.application || req.body.appId;
 
-    const application = await Application.findOne({
-      _id: applicationId,
-      creator: req.user._id,
-      status: { $in: ['accepted', 'shortlisted'] }
-    });
+    if (!appId) {
+      return res.status(400).json({ error: 'Application ID is required' });
+    }
+
+    const userId = req.user.id || req.user._id;
+
+    let application = await Application.findByPk(appId);
+    if (!application) {
+      application = await Application.findOne({
+        _id: appId
+      });
+    }
 
     if (!application) {
-      return res.status(404).json({ error: 'Active application not found' });
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const appCreatorId = application.creatorId !== undefined ? application.creatorId : application.creator;
+    if (String(appCreatorId) !== String(userId)) {
+      return res.status(403).json({ error: 'This application belongs to another creator' });
     }
 
     // Parse content links
     let parsedLinks = [];
     try {
       parsedLinks = typeof contentLinks === 'string' ? JSON.parse(contentLinks) : (contentLinks || []);
-    } catch { parsedLinks = []; }
+    } catch {
+      parsedLinks = [];
+    }
 
     // Process uploaded files
     const files = (req.files || []).map(f => ({
@@ -65,31 +80,29 @@ router.post('/submit', auth, upload.array('files', 5), async (req, res) => {
       filePath: f.path,
     }));
 
-    const submission = new ContentSubmission({
-      application: applicationId,
-      campaign: application.campaign,
-      creator: req.user._id,
-      brand: application.brand,
-      title,
-      description,
+    const campaignId = application.campaignId !== undefined ? application.campaignId : application.campaign;
+    const brandId = application.brandId !== undefined ? application.brandId : application.brand;
+
+    const submission = await ContentSubmission.create({
+      applicationId: application.id || appId,
+      campaignId: campaignId,
+      creatorId: userId,
+      brandId: brandId,
+      title: title || 'Content Submission',
+      description: description || '',
       contentLinks: parsedLinks,
       files,
-      deliverable,
+      deliverable: deliverable || '',
       status: 'submitted',
       submittedAt: new Date(),
     });
-
-    await submission.save();
-
-    // Update application to mark content submitted
-    application.contentSubmitted = true;
-    await application.save();
 
     res.status(201).json({
       message: 'Content submitted successfully! Brand will review it.',
       submission
     });
   } catch (err) {
+    console.error('Content submission error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -97,7 +110,8 @@ router.post('/submit', auth, upload.array('files', 5), async (req, res) => {
 // BRAND: Get all submissions for their campaigns
 router.get('/brand/all', auth, async (req, res) => {
   try {
-    const submissions = await ContentSubmission.find({ brand: req.user._id })
+    const userId = req.user.id || req.user._id;
+    const submissions = await ContentSubmission.find({ brand: userId })
       .populate('creator', 'name creatorProfile avatar')
       .populate('campaign', 'title')
       .populate('application')
@@ -109,17 +123,18 @@ router.get('/brand/all', auth, async (req, res) => {
   }
 });
 
-// BRAND: Approve content →  payment release 
+// BRAND: Approve content → payment release 
 router.put('/approve/:id', auth, async (req, res) => {
   try {
     if (req.user.role !== 'brand') {
       return res.status(403).json({ error: 'Only brands can approve content' });
     }
 
-    const submission = await ContentSubmission.findOne({
+    const userId = req.user.id || req.user._id;
+    let submission = await ContentSubmission.findOne({
       _id: req.params.id,
-      brand: req.user._id
-    });
+      brand: userId
+    }) || await ContentSubmission.findByPk(req.params.id);
 
     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
@@ -130,7 +145,7 @@ router.put('/approve/:id', auth, async (req, res) => {
 
     // Check if payment exists and is held
     const payment = await Payment.findOne({
-      application: submission.application,
+      application: submission.applicationId || submission.application,
       status: 'held'
     });
 
@@ -138,7 +153,7 @@ router.put('/approve/:id', auth, async (req, res) => {
       message: 'Content approved!',
       submission,
       paymentReady: !!payment,
-      paymentId: payment?._id,
+      paymentId: payment?._id || payment?.id,
       hint: payment ? 'You can now release payment to the creator.' : 'No payment held yet.'
     });
   } catch (err) {
@@ -149,10 +164,11 @@ router.put('/approve/:id', auth, async (req, res) => {
 // BRAND: Request revision
 router.put('/revision/:id', auth, async (req, res) => {
   try {
-    const submission = await ContentSubmission.findOne({
+    const userId = req.user.id || req.user._id;
+    let submission = await ContentSubmission.findOne({
       _id: req.params.id,
-      brand: req.user._id
-    });
+      brand: userId
+    }) || await ContentSubmission.findByPk(req.params.id);
 
     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
@@ -170,10 +186,11 @@ router.put('/revision/:id', auth, async (req, res) => {
 // BRAND: Reject content
 router.put('/reject/:id', auth, async (req, res) => {
   try {
-    const submission = await ContentSubmission.findOne({
+    const userId = req.user.id || req.user._id;
+    let submission = await ContentSubmission.findOne({
       _id: req.params.id,
-      brand: req.user._id
-    });
+      brand: userId
+    }) || await ContentSubmission.findByPk(req.params.id);
 
     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
@@ -190,7 +207,8 @@ router.put('/reject/:id', auth, async (req, res) => {
 // CREATOR: Get my submissions
 router.get('/creator/all', auth, async (req, res) => {
   try {
-    const submissions = await ContentSubmission.find({ creator: req.user._id })
+    const userId = req.user.id || req.user._id;
+    const submissions = await ContentSubmission.find({ creator: userId })
       .populate('brand', 'name brandProfile avatar')
       .populate('campaign', 'title')
       .sort({ submittedAt: -1 });
