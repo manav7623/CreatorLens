@@ -6,7 +6,8 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 60000 // 60s timeout to accommodate Render free-tier cold starts
 });
 
 // Add token to requests
