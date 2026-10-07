@@ -1,13 +1,16 @@
 import axios from 'axios';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost'))
-  ? process.env.NEXT_PUBLIC_API_URL
-  : 'https://creatorlens-hydg.onrender.com/api';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'https://creatorlens-hydg.onrender.com/api';
+};
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
-  timeout: 60000 // 60s timeout to accommodate Render free-tier cold starts
+  timeout: 60000 // 60s timeout
 });
 
 // Add token to requests
