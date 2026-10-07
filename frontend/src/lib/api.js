@@ -1,17 +1,11 @@
 import axios from 'axios';
 
-const getBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (typeof window !== 'undefined') {
-    return '/api';
-  }
-  return 'https://creatorlens-hydg.onrender.com/api';
-};
+const API_URL = (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost'))
+  ? process.env.NEXT_PUBLIC_API_URL
+  : 'https://creatorlens-hydg.onrender.com/api';
 
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -24,11 +18,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 errors
+// Handle 401 errors for authenticated requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
+    const url = error.config?.url || '';
+    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password');
+    if (error.response?.status === 401 && !isAuthRoute && typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/auth/login';

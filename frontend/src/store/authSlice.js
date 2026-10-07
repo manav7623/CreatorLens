@@ -8,10 +8,7 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   } catch (err) {
-    if (!err.response) {
-      return rejectWithValue('Cannot connect to backend server. Please verify backend is running.');
-    }
-    return rejectWithValue(err.response?.data?.error || 'Login failed');
+    return rejectWithValue(err.response?.data?.error || err.message || 'Login failed');
   }
 });
 
@@ -22,10 +19,7 @@ export const register = createAsyncThunk('auth/register', async (userData, { rej
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   } catch (err) {
-    if (!err.response) {
-      return rejectWithValue('Cannot connect to backend server. Please verify backend is running.');
-    }
-    return rejectWithValue(err.response?.data?.error || 'Registration failed');
+    return rejectWithValue(err.response?.data?.error || err.message || 'Registration failed');
   }
 });
 
@@ -35,10 +29,7 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   } catch (err) {
-    if (!err.response) {
-      return rejectWithValue('Cannot connect to backend server.');
-    }
-    return rejectWithValue(err.response?.data?.error || 'Update failed');
+    return rejectWithValue(err.response?.data?.error || err.message || 'Update failed');
   }
 });
 
