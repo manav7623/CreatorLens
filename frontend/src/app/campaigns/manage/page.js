@@ -170,12 +170,17 @@ export default function ManageCampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-1">My Campaigns</h1>
-          <p className="text-gray-400">Manage your brand campaigns</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">My Campaigns</h1>
+          <p className="text-gray-400 text-sm">Manage your brand campaigns</p>
         </div>
-        <Link href="/campaigns/create" className="btn-primary">+ New Campaign</Link>
+        <Link
+          href="/campaigns/create"
+          className="btn-primary inline-flex items-center justify-center whitespace-nowrap self-stretch sm:self-auto px-5 py-3 text-sm font-semibold rounded-xl text-center"
+        >
+          + New Campaign
+        </Link>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

@@ -98,20 +98,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             Welcome back, <span className="gradient-text">{user?.name?.split(' ')[0]}</span> 
           </h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-gray-400 mt-1 text-sm sm:text-base">
             {isCreator ? 'Track your collaborations and grow your brand deals' : 'Manage your campaigns and find the perfect creators'}
           </p>
         </div>
         <Link
           href={isCreator ? '/campaigns' : '/campaigns/create'}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap self-stretch sm:self-auto px-5 py-3 text-sm font-semibold rounded-xl text-center shadow-md hover:shadow-primary-500/20"
         >
-          {isCreator ? ' Find Campaigns' : '+ Create Campaign'}
+          {isCreator ? 'Find Campaigns' : '+ Create Campaign'}
         </Link>
       </div>
 
