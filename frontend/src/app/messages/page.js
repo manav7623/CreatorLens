@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { io } from 'socket.io-client';
-import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
+import { Send, MessageSquare, Trash2, ArrowLeft, Paperclip } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import toast from 'react-hot-toast';
 
@@ -35,37 +35,30 @@ export default function MessagesPage() {
     return () => {
       socketInstance.disconnect();
     };
-  }, [user]);
+  }, [user, isInitialized, router]);
 
   useEffect(() => {
     if (!socket) return;
-
-    const handleReceiveMessage = (msg) => {
-      if (selectedConv && String(msg.conversationId) === String(selectedConv._id)) {
+    socket.on('receive_message', (msg) => {
+      const convId = msg.conversationId || (msg.application?._id || msg.application?.id || msg.application);
+      const selId = selectedConv?._id || selectedConv?.id;
+      if (selectedConv && String(convId) === String(selId)) {
         setMessages(prev => [...prev, msg]);
       }
-    };
+      fetchConversations();
+    });
 
-    const handleMessageDeleted = ({ messageId, conversationId }) => {
-      if (selectedConv && String(conversationId) === String(selectedConv._id)) {
-        setMessages(prev => prev.filter(m => String(m._id || m.id) !== String(messageId)));
-      }
-    };
-
-    const handleChatCleared = ({ conversationId }) => {
-      if (selectedConv && String(conversationId) === String(selectedConv._id)) {
+    socket.on('messages_cleared', (data) => {
+      const selId = selectedConv?._id || selectedConv?.id;
+      if (selectedConv && String(data.applicationId) === String(selId)) {
         setMessages([]);
+        toast('Chat cleared by other party', { icon: '🧹' });
       }
-    };
-
-    socket.on('receiveMessage', handleReceiveMessage);
-    socket.on('messageDeleted', handleMessageDeleted);
-    socket.on('chatCleared', handleChatCleared);
+    });
 
     return () => {
-      socket.off('receiveMessage', handleReceiveMessage);
-      socket.off('messageDeleted', handleMessageDeleted);
-      socket.off('chatCleared', handleChatCleared);
+      socket.off('receive_message');
+      socket.off('messages_cleared');
     };
   }, [socket, selectedConv]);
 
@@ -75,27 +68,8 @@ export default function MessagesPage() {
 
   const fetchConversations = async () => {
     try {
-      // Get user's applications to create conversations
-      const { data } = await api.get('/applications/my');
-      const apps = data.applications;
-
-      // Also get brand-side applications if brand
-      let brandApps = [];
-      if (user?.role === 'brand') {
-        const { data: campaigns } = await api.get('/campaigns/my');
-        for (const c of campaigns.campaigns?.slice(0, 5) || []) {
-          try {
-            const { data: appData } = await api.get(`/applications/campaign/${c._id}`);
-            brandApps.push(...(appData.applications || []));
-          } catch {}
-        }
-      }
-
-      const allApps = [...apps, ...brandApps].filter((a, i, arr) =>
-        arr.findIndex(x => x._id === a._id) === i
-      );
-
-      setConversations(allApps);
+      const { data } = await api.get('/messages/conversations');
+      setConversations(data.conversations || []);
     } catch (err) {
       console.error(err);
     }
@@ -104,30 +78,28 @@ export default function MessagesPage() {
   const selectConversation = async (app) => {
     setSelectedConv(app);
     try {
-      const { data } = await api.get(`/messages/${app._id}`);
-      setMessages(data.messages);
+      const appId = app._id || app.id;
+      const { data } = await api.get(`/messages/${appId}`);
+      setMessages(data.messages || []);
     } catch (err) {
       toast.error('Failed to load messages');
     }
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConv) return;
+    if (!newMessage.trim() || !selectedConv || sending) return;
+    const appId = selectedConv._id || selectedConv.id;
+    const other = getOtherParty(selectedConv);
+    const receiverId = other?._id || other?.id;
+
     setSending(true);
-
-    const currentUserId = user?._id || user?.id;
-    const creatorId = selectedConv.creator?._id || selectedConv.creator?.id || selectedConv.creatorId || selectedConv.creator;
-    const brandId = selectedConv.brand?._id || selectedConv.brand?.id || selectedConv.brandId || selectedConv.brand;
-
-    const receiverId = String(currentUserId) === String(creatorId) ? brandId : creatorId;
-
     try {
       const { data } = await api.post('/messages', {
-        receiverId,
-        message: newMessage,
-        conversationId: selectedConv._id
+        applicationId: appId,
+        receiverId: receiverId,
+        message: newMessage.trim(),
       });
-      setMessages(prev => [...prev, { ...data.message, sender: { _id: user._id || user.id, id: user.id || user._id, name: user.name, avatar: user.avatar, role: user.role } }]);
+      setMessages(prev => [...prev, data.message]);
       setNewMessage('');
     } catch (err) {
       toast.error('Failed to send message');
@@ -136,96 +108,79 @@ export default function MessagesPage() {
     }
   };
 
-  const getMediaUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const base = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com';
-    return `${base}${url}`;
-  };
-
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !selectedConv) return;
 
     if (file.size > 50 * 1024 * 1024) {
-      toast.error('File is too large (max 50MB)');
+      toast.error('File size must be under 50MB');
       return;
     }
 
+    const appId = selectedConv._id || selectedConv.id;
+    const other = getOtherParty(selectedConv);
+    const receiverId = other?._id || other?.id;
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('applicationId', String(appId));
+    formData.append('receiverId', String(receiverId));
+    formData.append('message', `📎 Sent a file: ${file.name}`);
 
     setSending(true);
-    const toastId = toast.loading('Uploading media...');
+    const toastId = toast.loading('Uploading media proof...');
     try {
-      const { data: uploadData } = await api.post('/messages/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      const currentUserId = user?._id || user?.id;
-      const creatorId = selectedConv.creator?._id || selectedConv.creator?.id || selectedConv.creatorId || selectedConv.creator;
-      const brandId = selectedConv.brand?._id || selectedConv.brand?.id || selectedConv.brandId || selectedConv.brand;
-      const receiverId = String(currentUserId) === String(creatorId) ? brandId : creatorId;
-
-      const { data: msgData } = await api.post('/messages', {
-        receiverId,
-        conversationId: selectedConv._id,
-        fileUrl: uploadData.fileUrl,
-        fileType: uploadData.fileType,
-        message: ''
-      });
-
-      setMessages(prev => [
-        ...prev,
-        {
-          ...msgData.message,
-          sender: {
-            _id: user._id || user.id,
-            id: user.id || user._id,
-            name: user.name,
-            avatar: user.avatar,
-            role: user.role
-          }
-        }
-      ]);
-      toast.success('Media sent successfully!', { id: toastId });
+      const { data } = await api.post('/messages', formData);
+      setMessages(prev => [...prev, data.message]);
+      toast.success('File uploaded!', { id: toastId });
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send media', { id: toastId });
+      toast.error(err.response?.data?.error || 'Upload failed', { id: toastId });
     } finally {
       setSending(false);
+      e.target.value = '';
     }
   };
 
   const deleteMessage = async (messageId) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
+    if (!confirm('Delete this message?')) return;
     try {
       await api.delete(`/messages/${messageId}`);
       setMessages(prev => prev.filter(m => String(m._id || m.id) !== String(messageId)));
       toast.success('Message deleted');
-    } catch (err) {
-      toast.error('Failed to delete message');
+    } catch {
+      toast.error('Failed to delete');
     }
   };
 
   const clearChat = async () => {
     if (!selectedConv) return;
-    if (!confirm('Are you sure you want to delete all chat history in this conversation? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete all messages in this conversation?')) return;
+    const appId = selectedConv._id || selectedConv.id;
+
     try {
-      await api.delete(`/messages/conversation/${selectedConv._id}`);
+      await api.delete(`/messages/conversation/${appId}`);
       setMessages([]);
-      toast.success('Chat history cleared');
-    } catch (err) {
+      toast.success('Chat cleared');
+    } catch {
       toast.error('Failed to clear chat');
     }
   };
 
-  const getUserId = () => user?._id || user?.id;
   const isMine = (msg) => {
-    const senderId = msg.sender?._id || msg.sender?.id || msg.sender;
-    return senderId?.toString() === getUserId()?.toString();
+    const senderId = msg.sender?._id || msg.sender?.id || msg.senderId || msg.sender;
+    const myId = user?._id || user?.id;
+    return String(senderId) === String(myId);
+  };
+
+  const getMediaUrl = (fileUrl) => {
+    if (!fileUrl) return '';
+    if (fileUrl.startsWith('http')) return fileUrl;
+    const base = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com';
+    return `${base}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`;
   };
 
   const getOtherParty = (app) => {
+    if (!app) return null;
     const currentUserId = user?._id || user?.id;
     const creatorId = app.creator?._id || app.creator?.id || app.creatorId || app.creator;
     if (String(currentUserId) === String(creatorId)) {
@@ -243,7 +198,7 @@ export default function MessagesPage() {
           <div className={`w-full lg:w-80 glass border-r border-dark-600 overflow-y-auto flex-shrink-0 ${selectedConv ? 'hidden lg:block' : 'block'}`}>
             <div className="p-4 sm:p-6 border-b border-dark-600">
               <h2 className="font-bold text-xl">Messages</h2>
-              <p className="text-gray-400 text-sm">{conversations.length} conversations</p>
+              <p className="text-gray-400 text-sm">{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</p>
             </div>
 
             {conversations.length === 0 ? (
@@ -254,23 +209,24 @@ export default function MessagesPage() {
               </div>
             ) : conversations.map(app => {
               const other = getOtherParty(app);
+              const isSelected = (selectedConv?._id || selectedConv?.id) === (app._id || app.id);
               return (
                 <div
-                  key={app._id}
+                  key={app._id || app.id}
                   onClick={() => selectConversation(app)}
-                  className={`p-4 border-b border-dark-600 cursor-pointer transition-all ${
-                    selectedConv?._id === app._id ? 'bg-primary-500/10 border-l-2 border-l-primary-500' : 'hover:bg-dark-700'
+                  className={`p-3.5 sm:p-4 border-b border-dark-600 cursor-pointer transition-all ${
+                    isSelected ? 'bg-primary-500/15 border-l-4 border-l-primary-500' : 'hover:bg-dark-700/60'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <img
                       src={`https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'U')}&background=22223A&color=4F63FF&size=40`}
-                      className="w-10 h-10 rounded-xl flex-shrink-0"
+                      className="w-10 h-10 rounded-xl flex-shrink-0 object-cover"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm truncate">{other?.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{app.campaign?.title || 'Campaign'}</div>
-                      <span className={`text-xs mt-0.5 inline-block px-2 py-0.5 rounded-full ${
+                      <div className="text-xs text-gray-400 truncate">{app.campaign?.title || 'Campaign'}</div>
+                      <span className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full font-mono ${
                         app.status === 'accepted' ? 'bg-green-500/20 text-green-400' :
                         app.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                         'bg-gray-500/20 text-gray-400'
@@ -286,46 +242,64 @@ export default function MessagesPage() {
           <div className={`flex-1 flex-col h-full overflow-hidden ${!selectedConv ? 'hidden lg:flex' : 'flex'}`}>
             {selectedConv ? (
               <>
-                {/* Chat Header */}
-                <div className="glass border-b border-dark-600 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                  <button
-                    onClick={() => setSelectedConv(null)}
-                    className="lg:hidden p-2 -ml-1 rounded-xl text-gray-400 hover:text-white hover:bg-dark-700 transition-colors"
-                    aria-label="Back to conversations list"
-                  >
-                    <ArrowLeft size={20} />
-                  </button>
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(getOtherParty(selectedConv)?.name || 'U')}&background=4F63FF&color=fff&size=40`}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex-shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-sm sm:text-base truncate">{getOtherParty(selectedConv)?.name}</div>
-                    <div className="text-xs text-gray-400 truncate">{selectedConv.campaign?.title}</div>
+                {/* 📱💻 Optimized Responsive Chat Header */}
+                <div className="glass border-b border-dark-600 px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Mobile Back Button */}
+                    <button
+                      onClick={() => setSelectedConv(null)}
+                      className="lg:hidden p-1.5 -ml-1 rounded-xl text-gray-300 hover:text-white hover:bg-dark-700/80 active:scale-95 transition-all flex-shrink-0"
+                      aria-label="Back to conversations list"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(getOtherParty(selectedConv)?.name || 'U')}&background=4F63FF&color=fff&size=40`}
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-1 ring-white/10"
+                      />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-dark-900 rounded-full" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-sm sm:text-base text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs">
+                          {getOtherParty(selectedConv)?.name}
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium flex-shrink-0 ${
+                          selectedConv.status === 'accepted' ? 'bg-green-500/20 text-green-400' :
+                          'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {selectedConv.status}
+                        </span>
+                      </div>
+                      <div className="text-[11px] sm:text-xs text-gray-400 truncate">
+                        {selectedConv.campaign?.title || 'Direct Message'}
+                      </div>
+                    </div>
                   </div>
-                  <div className="ml-auto flex items-center gap-3">
-                    <span className={`text-xs px-3 py-1 rounded-full font-mono ${
-                      selectedConv.status === 'accepted' ? 'bg-green-500/20 text-green-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      Deal: {selectedConv.status}
-                    </span>
+
+                  {/* Header Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={clearChat}
-                      className="text-xs bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 font-semibold animate-pulse hover:animate-none"
+                      className="p-2 sm:px-3 sm:py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl transition-all flex items-center gap-1 font-medium active:scale-95"
                       title="Clear entire conversation"
                     >
-                      <Trash2 size={12} /> Clear Chat
+                      <Trash2 size={15} />
+                      <span className="hidden sm:inline">Clear Chat</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Messages Body */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
                   {messages.length === 0 && (
-                    <div className="text-center text-gray-400 py-12">
-                      <MessageSquare size={32} className="mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">No messages yet. Say hello! 👋</p>
+                    <div className="text-center text-gray-400 py-16">
+                      <MessageSquare size={36} className="mx-auto mb-3 opacity-30 text-primary-400" />
+                      <p className="text-sm font-medium">No messages yet. Say hello! 👋</p>
+                      <p className="text-xs text-gray-500 mt-1">Discuss deliverables, deadlines and requirements</p>
                     </div>
                   )}
                   {messages.map((msg, i) => {
@@ -336,17 +310,17 @@ export default function MessagesPage() {
                     return (
                       <div key={i} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                         {/* Sender details */}
-                        <div className="flex items-center gap-1.5 mb-1 px-2 text-[11px] text-gray-400">
+                        <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-gray-400">
                           <span className="font-semibold text-gray-300">{senderName}</span>
                           {senderRole && (
-                            <span className={`px-1.5 py-0.5 rounded-md text-[9px] uppercase font-mono tracking-wider font-semibold ${
+                            <span className={`px-1.5 py-0.2 rounded-md text-[9px] uppercase font-mono tracking-wider font-semibold ${
                               senderRole === 'brand' ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'
                             }`}>
                               {senderRole}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 group max-w-xs lg:max-w-md">
+                        <div className="flex items-center gap-2 group max-w-[85%] sm:max-w-md">
                           {mine && (
                             <button
                               onClick={() => deleteMessage(msg._id || msg.id)}
@@ -356,7 +330,7 @@ export default function MessagesPage() {
                               <Trash2 size={13} />
                             </button>
                           )}
-                          <div className={`w-full px-4 py-3 rounded-2xl ${
+                          <div className={`w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl ${
                             mine
                               ? 'bg-primary-500 text-white rounded-br-sm'
                               : 'glass text-white rounded-bl-sm'
@@ -381,15 +355,15 @@ export default function MessagesPage() {
                                     href={getMediaUrl(msg.fileUrl)} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="flex items-center gap-2 p-2 bg-dark-800/40 text-blue-400 hover:underline"
+                                    className="flex items-center gap-2 p-2 bg-dark-800/40 text-blue-400 hover:underline text-xs"
                                   >
                                     📎 Download Attachment
                                   </a>
                                 )}
                               </div>
                             )}
-                            {msg.message && <p className="text-sm leading-relaxed">{msg.message}</p>}
-                            <p className={`text-xs mt-1 ${mine ? 'text-primary-200' : 'text-gray-500'}`}>
+                            {msg.message && <p className="text-sm leading-relaxed break-words">{msg.message}</p>}
+                            <p className={`text-[10px] mt-1 ${mine ? 'text-primary-200' : 'text-gray-500'}`}>
                               {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
@@ -400,10 +374,10 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
-                <div className="glass border-t border-dark-600 p-4">
-                  <div className="flex items-center gap-3">
-                    <label className="p-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 hover:border-dark-500 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all flex items-center justify-center flex-shrink-0">
+                {/* 📱💻 Bottom Input Composer */}
+                <div className="glass border-t border-dark-600 p-2.5 sm:p-4 bg-dark-900/90 backdrop-blur-md">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <label className="p-2.5 sm:p-3 bg-dark-700/80 hover:bg-dark-600 border border-dark-600 hover:border-dark-500 rounded-xl cursor-pointer text-gray-300 hover:text-white transition-all flex items-center justify-center flex-shrink-0 active:scale-95" title="Attach file or screenshot">
                       <input 
                         type="file" 
                         className="hidden" 
@@ -411,11 +385,11 @@ export default function MessagesPage() {
                         onChange={handleFileUpload} 
                         disabled={sending}
                       />
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-paperclip"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                      <Paperclip size={18} />
                     </label>
 
                     <input
-                      className="input-field flex-1"
+                      className="input-field flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 text-sm rounded-xl"
                       placeholder="Type a message..."
                       value={newMessage}
                       onChange={e => setNewMessage(e.target.value)}
@@ -424,19 +398,20 @@ export default function MessagesPage() {
                     <button
                       onClick={sendMessage}
                       disabled={sending || !newMessage.trim()}
-                      className="btn-primary px-4 py-3 flex-shrink-0"
+                      className="btn-primary p-2.5 sm:px-4 sm:py-3 rounded-xl flex-shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      aria-label="Send message"
                     >
-                      <Send size={18} />
+                      <Send size={17} />
                     </button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
+              <div className="flex-1 flex items-center justify-center text-gray-400 p-6">
                 <div className="text-center">
-                  <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
-                  <p className="text-lg">Select a conversation</p>
-                  <p className="text-sm text-gray-500">Your deals and chats appear here</p>
+                  <MessageSquare size={48} className="mx-auto mb-4 opacity-20 text-primary-400" />
+                  <p className="text-lg font-semibold text-gray-300">Select a conversation</p>
+                  <p className="text-sm text-gray-500 mt-1">Your deals and active chats will appear here</p>
                 </div>
               </div>
             )}
