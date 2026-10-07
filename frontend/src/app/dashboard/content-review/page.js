@@ -8,7 +8,8 @@ const getFileUrl = (filePath) => {
   if (!filePath) return '';
   const cleanPath = filePath.replace(/\\/g, '/');
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) return cleanPath;
-  return `http://localhost:5000/${cleanPath}`;
+  const base = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com';
+  return `${base}/${cleanPath}`;
 };
 
 const statusConfig = {

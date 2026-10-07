@@ -22,7 +22,7 @@ export default function MessagesPage() {
     fetchConversations();
 
     // Initialize socket
-    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000');
+    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com');
     socketInstance.emit('join', String(user?._id || user?.id));
     setSocket(socketInstance);
 
@@ -133,7 +133,8 @@ export default function MessagesPage() {
   const getMediaUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `http://localhost:5000${url}`;
+    const base = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com';
+    return `${base}${url}`;
   };
 
   const handleFileUpload = async (e) => {
