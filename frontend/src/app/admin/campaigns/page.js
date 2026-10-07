@@ -8,19 +8,20 @@ import toast from 'react-hot-toast';
 import { Megaphone, Search, Trash2, Calendar, Globe, CreditCard } from 'lucide-react';
 
 export default function AdminCampaignsPage() {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
   const [campaigns, setCampaigns] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!user || user.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
     fetchCampaigns();
-  }, [user]);
+  }, [user, isInitialized]);
 
   const fetchCampaigns = async () => {
     try {

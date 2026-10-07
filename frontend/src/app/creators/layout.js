@@ -5,12 +5,22 @@ import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 
 export default function CreatorsLayout({ children }) {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.push('/auth/login');
-  }, [user]);
+    if (isInitialized && !user) {
+      router.push('/auth/login');
+    }
+  }, [isInitialized, user, router]);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 

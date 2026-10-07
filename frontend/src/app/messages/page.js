@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { io } from 'socket.io-client';
 import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
@@ -8,7 +9,8 @@ import Sidebar from '@/components/Sidebar';
 import toast from 'react-hot-toast';
 
 export default function MessagesPage() {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
+  const router = useRouter();
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -18,7 +20,11 @@ export default function MessagesPage() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isInitialized) return;
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
     fetchConversations();
 
     // Initialize socket

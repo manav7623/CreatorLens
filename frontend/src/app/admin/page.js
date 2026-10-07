@@ -32,18 +32,19 @@ function AdminStats({ stats }) {
 }
 
 export default function AdminPage() {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!user || user.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
     fetchStats();
-  }, [user]);
+  }, [user, isInitialized]);
 
   const fetchStats = async () => {
     try {

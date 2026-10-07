@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { Users, Shield, Zap, Ban, CheckCircle, Star, Search, Trash2 } from 'lucide-react';
 
 export default function AdminUsersPage() {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
@@ -16,12 +16,13 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!user || user.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
     fetchUsers();
-  }, [user]);
+  }, [user, isInitialized]);
 
   const fetchUsers = async () => {
     try {

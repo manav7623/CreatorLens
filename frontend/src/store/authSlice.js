@@ -7,7 +7,6 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('user', JSON.stringify(data.user));
-      // Clear persistent legacy storage so session ends when browser/tab closes
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
@@ -45,18 +44,37 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
   }
 });
 
+const getInitialSession = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const user = sessionStorage.getItem('user');
+      const token = sessionStorage.getItem('token');
+      if (user && token) {
+        return { user: JSON.parse(user), token, isInitialized: true };
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return { user: null, token: null, isInitialized: false };
+};
+
+const initialSession = getInitialSession();
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user: null,
-    token: null,
+    user: initialSession.user,
+    token: initialSession.token,
     loading: false,
     error: null,
+    isInitialized: initialSession.isInitialized,
   },
   reducers: {
     logout: (state) => {
       state.user = null;
       state.token = null;
+      state.isInitialized = true;
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
@@ -74,11 +92,6 @@ const authSlice = createSlice({
     restoreAuth: (state) => {
       if (typeof window !== 'undefined') {
         try {
-          // Clear any legacy persistent storage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-
-          // Read only active browser session storage
           const user = sessionStorage.getItem('user');
           const token = sessionStorage.getItem('token');
           state.user = user ? JSON.parse(user) : null;
@@ -88,6 +101,7 @@ const authSlice = createSlice({
           state.token = null;
         }
       }
+      state.isInitialized = true;
     }
   },
   extraReducers: (builder) => {
@@ -97,20 +111,24 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.isInitialized = true;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.isInitialized = true;
       })
       .addCase(register.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(register.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.isInitialized = true;
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.isInitialized = true;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload.user;

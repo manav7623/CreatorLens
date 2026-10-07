@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { CreditCard, Search, DollarSign, RefreshCw, Layers } from 'lucide-react';
 
 export default function AdminPaymentsPage() {
-  const { user } = useSelector(state => state.auth);
+  const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
   const [payments, setPayments] = useState([]);
   const [totalVolume, setTotalVolume] = useState(0);
@@ -17,12 +17,13 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!user || user.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
     fetchPayments();
-  }, [user]);
+  }, [user, isInitialized]);
 
   const fetchPayments = async () => {
     try {
