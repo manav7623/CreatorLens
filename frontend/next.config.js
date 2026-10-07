@@ -17,6 +17,18 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://creatorlens-hydg.onrender.com/api/:path*',
+      },
+      {
+        source: '/uploads/:path*',
+        destination: 'https://creatorlens-hydg.onrender.com/uploads/:path*',
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://creatorlens-hydg.onrender.com/api',
     NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com',

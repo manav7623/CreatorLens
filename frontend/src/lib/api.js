@@ -1,9 +1,17 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://creatorlens-hydg.onrender.com/api';
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    return '/api';
+  }
+  return 'https://creatorlens-hydg.onrender.com/api';
+};
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getBaseUrl(),
   headers: { 'Content-Type': 'application/json' }
 });
 
