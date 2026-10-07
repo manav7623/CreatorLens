@@ -1,16 +1,19 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSelector } from 'react-redux';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { io } from 'socket.io-client';
 import { Send, MessageSquare, Trash2, ArrowLeft, Paperclip } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import toast from 'react-hot-toast';
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { user, isInitialized } = useSelector(state => state.auth);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetAppId = searchParams.get('app') || searchParams.get('applicationId');
+
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -25,7 +28,7 @@ export default function MessagesPage() {
       router.push('/auth/login');
       return;
     }
-    fetchConversations();
+    fetchConversations(targetAppId);
 
     // Initialize socket
     const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://creatorlens-hydg.onrender.com');
@@ -35,7 +38,7 @@ export default function MessagesPage() {
     return () => {
       socketInstance.disconnect();
     };
-  }, [user, isInitialized, router]);
+  }, [user, isInitialized, router, targetAppId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -44,6 +47,18 @@ export default function MessagesPage() {
       const selId = selectedConv?._id || selectedConv?.id;
       if (selectedConv && String(convId) === String(selId)) {
         setMessages(prev => [...prev, msg]);
+      }
+      fetchConversations();
+    });
+
+    socket.on('receiveMessage', (msg) => {
+      const convId = msg.conversationId || (msg.application?._id || msg.application?.id || msg.application);
+      const selId = selectedConv?._id || selectedConv?.id;
+      if (selectedConv && String(convId) === String(selId)) {
+        setMessages(prev => {
+          if (prev.some(m => String(m._id || m.id) === String(msg._id || msg.id))) return prev;
+          return [...prev, msg];
+        });
       }
       fetchConversations();
     });
@@ -58,6 +73,7 @@ export default function MessagesPage() {
 
     return () => {
       socket.off('receive_message');
+      socket.off('receiveMessage');
       socket.off('messages_cleared');
     };
   }, [socket, selectedConv]);
@@ -66,10 +82,29 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (autoSelectAppId) => {
     try {
       const { data } = await api.get('/messages/conversations');
-      setConversations(data.conversations || []);
+      const convList = data.conversations || [];
+      setConversations(convList);
+
+      if (autoSelectAppId) {
+        const found = convList.find(c => String(c._id || c.id) === String(autoSelectAppId));
+        if (found) {
+          selectConversation(found);
+        } else {
+          // If not in conversation list, load application directly
+          try {
+            const appRes = await api.get(`/applications/${autoSelectAppId}`);
+            if (appRes.data.application) {
+              setConversations(prev => [appRes.data.application, ...prev]);
+              selectConversation(appRes.data.application);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
     }
@@ -197,19 +232,21 @@ export default function MessagesPage() {
           {/* Conversation List */}
           <div className={`w-full lg:w-80 glass border-r border-dark-600 overflow-y-auto flex-shrink-0 ${selectedConv ? 'hidden lg:block' : 'block'}`}>
             <div className="p-4 sm:p-6 border-b border-dark-600">
-              <h2 className="font-bold text-xl">Messages</h2>
-              <p className="text-gray-400 text-sm">{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</p>
+              <h2 className="font-bold text-xl text-white">Messages</h2>
+              <p className="text-gray-400 text-xs sm:text-sm mt-0.5">{conversations.length} active application deal{conversations.length === 1 ? '' : 's'}</p>
             </div>
 
             {conversations.length === 0 ? (
               <div className="p-6 text-center text-gray-400">
-                <MessageSquare size={32} className="mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No conversations yet</p>
-                <p className="text-xs text-gray-500 mt-1">Apply to campaigns to start chatting</p>
+                <MessageSquare size={32} className="mx-auto mb-3 opacity-30 text-primary-400" />
+                <p className="text-sm font-medium text-gray-300">No active conversations</p>
+                <p className="text-xs text-gray-500 mt-1">Apply to campaigns or hire creators to start chatting</p>
               </div>
             ) : conversations.map(app => {
               const other = getOtherParty(app);
               const isSelected = (selectedConv?._id || selectedConv?.id) === (app._id || app.id);
+              const otherName = other?.brandProfile?.companyName || other?.name || 'User';
+
               return (
                 <div
                   key={app._id || app.id}
@@ -220,15 +257,16 @@ export default function MessagesPage() {
                 >
                   <div className="flex items-center gap-3">
                     <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'U')}&background=22223A&color=4F63FF&size=40`}
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(otherName)}&background=22223A&color=4F63FF&size=40`}
                       className="w-10 h-10 rounded-xl flex-shrink-0 object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{other?.name}</div>
+                      <div className="font-semibold text-sm text-white truncate">{otherName}</div>
                       <div className="text-xs text-gray-400 truncate">{app.campaign?.title || 'Campaign'}</div>
-                      <span className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full font-mono ${
+                      <span className={`text-[10px] mt-1 inline-block px-2 py-0.5 rounded-full font-mono font-medium ${
                         app.status === 'accepted' ? 'bg-green-500/20 text-green-400' :
                         app.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                        app.status === 'shortlisted' ? 'bg-blue-500/20 text-blue-400' :
                         'bg-gray-500/20 text-gray-400'
                       }`}>{app.status}</span>
                     </div>
@@ -256,7 +294,7 @@ export default function MessagesPage() {
                     
                     <div className="relative flex-shrink-0">
                       <img
-                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(getOtherParty(selectedConv)?.name || 'U')}&background=4F63FF&color=fff&size=40`}
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(getOtherParty(selectedConv)?.brandProfile?.companyName || getOtherParty(selectedConv)?.name || 'U')}&background=4F63FF&color=fff&size=40`}
                         className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-1 ring-white/10"
                       />
                       <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-dark-900 rounded-full" />
@@ -265,17 +303,18 @@ export default function MessagesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-sm sm:text-base text-white truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs">
-                          {getOtherParty(selectedConv)?.name}
+                          {getOtherParty(selectedConv)?.brandProfile?.companyName || getOtherParty(selectedConv)?.name}
                         </span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium flex-shrink-0 ${
                           selectedConv.status === 'accepted' ? 'bg-green-500/20 text-green-400' :
+                          selectedConv.status === 'shortlisted' ? 'bg-blue-500/20 text-blue-400' :
                           'bg-yellow-500/20 text-yellow-400'
                         }`}>
                           {selectedConv.status}
                         </span>
                       </div>
                       <div className="text-[11px] sm:text-xs text-gray-400 truncate">
-                        {selectedConv.campaign?.title || 'Direct Message'}
+                        {selectedConv.campaign?.title || 'Campaign Deal Chat'}
                       </div>
                     </div>
                   </div>
@@ -299,7 +338,7 @@ export default function MessagesPage() {
                     <div className="text-center text-gray-400 py-16">
                       <MessageSquare size={36} className="mx-auto mb-3 opacity-30 text-primary-400" />
                       <p className="text-sm font-medium">No messages yet. Say hello! 👋</p>
-                      <p className="text-xs text-gray-500 mt-1">Discuss deliverables, deadlines and requirements</p>
+                      <p className="text-xs text-gray-500 mt-1">Discuss requirements, campaign deliverables, and negotiation details</p>
                     </div>
                   )}
                   {messages.map((msg, i) => {
@@ -410,8 +449,8 @@ export default function MessagesPage() {
               <div className="flex-1 flex items-center justify-center text-gray-400 p-6">
                 <div className="text-center">
                   <MessageSquare size={48} className="mx-auto mb-4 opacity-20 text-primary-400" />
-                  <p className="text-lg font-semibold text-gray-300">Select a conversation</p>
-                  <p className="text-sm text-gray-500 mt-1">Your deals and active chats will appear here</p>
+                  <p className="text-lg font-semibold text-gray-300">Select an application conversation</p>
+                  <p className="text-sm text-gray-500 mt-1">Chat directly with brands and creators regarding your campaign deals</p>
                 </div>
               </div>
             )}
@@ -419,5 +458,17 @@ export default function MessagesPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-dark-900">
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
   );
 }

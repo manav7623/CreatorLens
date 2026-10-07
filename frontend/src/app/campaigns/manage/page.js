@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { Eye, Users, Calendar, Edit2, Trash2, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Eye, Users, Calendar, Edit2, Trash2, CheckCircle, Clock, XCircle, MessageSquare } from 'lucide-react';
 
 function ApplicationCard({ app, onStatusChange }) {
   const [updating, setUpdating] = useState(false);
@@ -11,7 +11,7 @@ function ApplicationCard({ app, onStatusChange }) {
   const handleStatus = async (status, dealAmount) => {
     setUpdating(true);
     try {
-      await api.put(`/applications/${app._id}/status`, { status, dealAmount });
+      await api.put(`/applications/${app._id || app.id}/status`, { status, dealAmount });
       toast.success(`Application ${status}!`);
       onStatusChange();
     } catch (err) {
@@ -27,12 +27,14 @@ function ApplicationCard({ app, onStatusChange }) {
   const scoreColor = (profile?.aiScore || 0) >= 75 ? 'text-green-400' :
     (profile?.aiScore || 0) >= 50 ? 'text-yellow-400' : 'text-red-400';
 
+  const appId = app._id || app.id;
+
   return (
     <div className="bg-dark-700 rounded-xl p-4">
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col sm:flex-row items-start gap-4">
         <img
           src={`https://ui-avatars.com/api/?name=${encodeURIComponent(creator?.name || 'C')}&background=22223A&color=4F63FF&size=48`}
-          className="w-12 h-12 rounded-xl flex-shrink-0"
+          className="w-12 h-12 rounded-xl flex-shrink-0 object-cover"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -55,9 +57,15 @@ function ApplicationCard({ app, onStatusChange }) {
             <span>Timeline: {app.timeline || 'Not specified'}</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2 flex-shrink-0">
+        <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-2 flex-shrink-0 w-full sm:w-auto justify-between sm:justify-start pt-2 sm:pt-0 border-t sm:border-t-0 border-dark-600">
+          <Link
+            href={`/messages?app=${appId}`}
+            className="text-xs bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all font-medium"
+          >
+            <MessageSquare size={13} /> Chat with Creator
+          </Link>
           {app.status === 'pending' && (
-            <>
+            <div className="flex gap-1.5">
               <button
                 onClick={() => handleStatus('shortlisted')}
                 disabled={updating}
@@ -79,7 +87,7 @@ function ApplicationCard({ app, onStatusChange }) {
               >
                 Reject
               </button>
-            </>
+            </div>
           )}
           {app.status === 'shortlisted' && (
             <button
