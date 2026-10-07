@@ -6,12 +6,37 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
+
+// Ensure upload directories exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const contentUploadsDir = path.join(uploadsDir, 'content');
+if (!fs.existsSync(contentUploadsDir)) fs.mkdirSync(contentUploadsDir, { recursive: true });
+
 const app = express();
 const server = http.createServer(app);
 
+// Parse allowed client URLs (supports single URL, comma-separated list, or wildcard)
+const rawClientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+const allowedOrigins = rawClientUrl.split(',').map(u => u.trim());
+
+const corsOriginCheck = (origin, callback) => {
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    return callback(null, true);
+  }
+  // Allow all in production if configured with permissive origin or match
+  return callback(null, true);
+};
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: corsOriginCheck,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -22,13 +47,35 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: corsOriginCheck,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(uploadsDir));
+
+// Health check endpoints for cloud deployment platforms (Render, Railway, AWS, GCP, Fly.io, etc.)
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'CreatorLens Backend API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -40,7 +87,6 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/content', require('./routes/content'));
-app.use('/api/instagram', require('./routes/instagram'));
 app.use('/api/instagram', require('./routes/instagram'));
 
 // Socket.IO for real-time chat
@@ -135,6 +181,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

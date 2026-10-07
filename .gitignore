@@ -1,7 +1,30 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Testing and Build
 .next/
 dist/
 build/
+out/
+
+# Environment Variables & Secrets
 .env
 .env.local
-.env.*
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+backend/.env
+backend/.env.local
+frontend/.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
