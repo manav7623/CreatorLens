@@ -44,16 +44,16 @@ export default function AdminPaymentsPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col lg:flex-row">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8 page-enter space-y-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 page-enter space-y-6 lg:space-y-8 w-full">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Escrow & Payments</h1>
-          <p className="text-gray-400">Monitor deal transactions, platform fees, and escrow status</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Escrow & Payments</h1>
+          <p className="text-gray-400 text-sm">Monitor deal transactions, platform fees, and escrow status</p>
         </div>
 
         {/* Stats Blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <div className="glass rounded-2xl p-6 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
               <CreditCard size={24} />

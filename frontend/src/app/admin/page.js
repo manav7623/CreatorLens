@@ -20,11 +20,11 @@ function AdminStats({ stats }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
       {cards.map(({ label, value, color }) => (
-        <div key={label} className="glass rounded-xl p-4 text-center">
-          <div className={`text-2xl font-bold ${color}`}>{value}</div>
-          <div className="text-gray-400 text-xs mt-1">{label}</div>
+        <div key={label} className="glass rounded-xl p-3 sm:p-4 text-center">
+          <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
+          <div className="text-gray-400 text-xs mt-1 truncate">{label}</div>
         </div>
       ))}
     </div>
@@ -57,19 +57,19 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col lg:flex-row">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8 page-enter space-y-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 page-enter space-y-6 lg:space-y-8 w-full">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Admin Panel</h1>
-          <p className="text-gray-400">Overview of platform status and administrative controls</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Admin Panel</h1>
+          <p className="text-gray-400 text-sm">Overview of platform status and administrative controls</p>
         </div>
 
         {stats && <AdminStats stats={stats} />}
 
         {/* Section: Quick Links */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Link href="/admin/users" className="glass rounded-2xl p-6 card-hover flex flex-col justify-between h-48 border border-blue-500/20 glow-blue">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <Link href="/admin/users" className="glass rounded-2xl p-5 sm:p-6 card-hover flex flex-col justify-between min-h-[11rem] border border-blue-500/20 glow-blue">
             <div>
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
                 <Users size={20} />
@@ -77,12 +77,12 @@ export default function AdminPage() {
               <h3 className="font-bold text-lg mb-1">User Management</h3>
               <p className="text-gray-400 text-sm">Verify new signups, ban violators, and edit accounts</p>
             </div>
-            <div className="flex items-center gap-1.5 text-blue-400 text-sm font-semibold">
+            <div className="flex items-center gap-1.5 text-blue-400 text-sm font-semibold mt-4">
               Go to Users <ArrowRight size={14} />
             </div>
           </Link>
 
-          <Link href="/admin/campaigns" className="glass rounded-2xl p-6 card-hover flex flex-col justify-between h-48 border border-green-500/20 glow-green">
+          <Link href="/admin/campaigns" className="glass rounded-2xl p-5 sm:p-6 card-hover flex flex-col justify-between min-h-[11rem] border border-green-500/20 glow-green">
             <div>
               <div className="w-10 h-10 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center mb-4">
                 <Megaphone size={20} />
@@ -90,12 +90,12 @@ export default function AdminPage() {
               <h3 className="font-bold text-lg mb-1">Campaign Management</h3>
               <p className="text-gray-400 text-sm">Track campaign budgets, niches, and active status</p>
             </div>
-            <div className="flex items-center gap-1.5 text-green-400 text-sm font-semibold">
+            <div className="flex items-center gap-1.5 text-green-400 text-sm font-semibold mt-4">
               Go to Campaigns <ArrowRight size={14} />
             </div>
           </Link>
 
-          <Link href="/admin/payments" className="glass rounded-2xl p-6 card-hover flex flex-col justify-between h-48 border border-purple-500/20 glow-purple">
+          <Link href="/admin/payments" className="glass rounded-2xl p-5 sm:p-6 card-hover flex flex-col justify-between min-h-[11rem] border border-purple-500/20 glow-purple">
             <div>
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4">
                 <CreditCard size={20} />
@@ -103,14 +103,14 @@ export default function AdminPage() {
               <h3 className="font-bold text-lg mb-1">Escrow & Fees</h3>
               <p className="text-gray-400 text-sm">Monitor platform volume, escrow holdings, and payouts</p>
             </div>
-            <div className="flex items-center gap-1.5 text-purple-400 text-sm font-semibold">
+            <div className="flex items-center gap-1.5 text-purple-400 text-sm font-semibold mt-4">
               Go to Payments <ArrowRight size={14} />
             </div>
           </Link>
         </div>
 
         {/* Platform Status Log */}
-        <div className="glass rounded-2xl p-6 border border-dark-600">
+        <div className="glass rounded-2xl p-5 sm:p-6 border border-dark-600">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
             <Shield size={18} className="text-primary-400" />
             System Status
@@ -121,8 +121,8 @@ export default function AdminPage() {
               <span className="text-green-400 font-semibold">MySQL (Connected)</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-dark-700">
-              <span className="text-gray-400">Backend Server Port</span>
-              <span className="text-white">5000</span>
+              <span className="text-gray-400">Backend API</span>
+              <span className="text-white">Render Cloud (Healthy)</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-dark-700">
               <span className="text-gray-400">Session Security</span>

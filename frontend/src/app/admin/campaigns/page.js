@@ -50,16 +50,16 @@ export default function AdminCampaignsPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col lg:flex-row">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8 page-enter space-y-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 page-enter space-y-6 lg:space-y-8 w-full">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Campaign Management</h1>
-          <p className="text-gray-400">View and manage all campaigns hosted on the platform</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Campaign Management</h1>
+          <p className="text-gray-400 text-sm">View and manage all campaigns hosted on the platform</p>
         </div>
 
         {/* Search */}
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-2xl p-4 sm:p-6">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input

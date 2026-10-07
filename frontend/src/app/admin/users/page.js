@@ -74,18 +74,18 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col lg:flex-row">
       <Sidebar />
-      <main className="flex-1 ml-64 p-8 page-enter space-y-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 page-enter space-y-6 lg:space-y-8 w-full">
         <div>
-          <h1 className="text-3xl font-bold mb-1">User Management</h1>
-          <p className="text-gray-400">View and manage all registered brands and creators</p>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">User Management</h1>
+          <p className="text-gray-400 text-sm">View and manage all registered brands and creators</p>
         </div>
 
         {/* Users Table */}
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="p-6 border-b border-dark-600">
-            <div className="flex gap-3">
+          <div className="p-4 sm:p-6 border-b border-dark-600">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
                 />
               </div>
               <select
-                className="input-field py-2.5 text-sm w-40"
+                className="input-field py-2.5 text-sm w-full sm:w-40"
                 value={roleFilter}
                 onChange={e => setRoleFilter(e.target.value)}
               >

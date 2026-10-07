@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import api from '@/lib/api';
 import { io } from 'socket.io-client';
-import { Send, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import toast from 'react-hot-toast';
 
@@ -229,13 +229,13 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col lg:flex-row">
       <Sidebar />
-      <main className="flex-1 ml-64">
-        <div className="flex h-screen">
+      <main className="flex-1 lg:ml-64 h-[calc(100dvh-57px)] lg:h-screen flex flex-col overflow-hidden">
+        <div className="flex h-full w-full">
           {/* Conversation List */}
-          <div className="w-80 glass border-r border-dark-600 overflow-y-auto">
-            <div className="p-6 border-b border-dark-600">
+          <div className={`w-full lg:w-80 glass border-r border-dark-600 overflow-y-auto flex-shrink-0 ${selectedConv ? 'hidden lg:block' : 'block'}`}>
+            <div className="p-4 sm:p-6 border-b border-dark-600">
               <h2 className="font-bold text-xl">Messages</h2>
               <p className="text-gray-400 text-sm">{conversations.length} conversations</p>
             </div>
@@ -277,18 +277,25 @@ export default function MessagesPage() {
           </div>
 
           {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className={`flex-1 flex-col h-full overflow-hidden ${!selectedConv ? 'hidden lg:flex' : 'flex'}`}>
             {selectedConv ? (
               <>
                 {/* Chat Header */}
-                <div className="glass border-b border-dark-600 p-4 flex items-center gap-3">
+                <div className="glass border-b border-dark-600 p-3 sm:p-4 flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <button
+                    onClick={() => setSelectedConv(null)}
+                    className="lg:hidden p-2 -ml-1 rounded-xl text-gray-400 hover:text-white hover:bg-dark-700 transition-colors"
+                    aria-label="Back to conversations list"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
                   <img
                     src={`https://ui-avatars.com/api/?name=${encodeURIComponent(getOtherParty(selectedConv)?.name || 'U')}&background=4F63FF&color=fff&size=40`}
-                    className="w-10 h-10 rounded-xl"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex-shrink-0"
                   />
-                  <div>
-                    <div className="font-semibold">{getOtherParty(selectedConv)?.name}</div>
-                    <div className="text-xs text-gray-400">{selectedConv.campaign?.title}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-sm sm:text-base truncate">{getOtherParty(selectedConv)?.name}</div>
+                    <div className="text-xs text-gray-400 truncate">{selectedConv.campaign?.title}</div>
                   </div>
                   <div className="ml-auto flex items-center gap-3">
                     <span className={`text-xs px-3 py-1 rounded-full font-mono ${
