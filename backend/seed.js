@@ -1,7 +1,8 @@
-// Run this file to create demo accounts
+// Seed script to clean and populate CreatorLens database with fresh realistic @gmail.com accounts
 // Command: node seed.js
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { sequelize, initializeDatabase } = require('./config/database');
 const setupAssociations = require('./models/associations');
 const User = require('./models/User');
@@ -11,373 +12,466 @@ const Payment = require('./models/Payment');
 
 async function seed() {
   try {
-    // Initialize DB and wipe/recreate tables
+    console.log('⏳ Connecting to Aiven Cloud MySQL database...');
     await initializeDatabase();
     setupAssociations();
-    await sequelize.sync({ force: true });
-    console.log('✅ Database tables cleared and recreated.');
 
-    // Create Admin
-    const admin = await User.create({
-      name: 'Admin User',
-      email: 'admin@demo.com',
-      password: 'MD123456',
+    // Drop and re-create all tables for a completely fresh start
+    await sequelize.sync({ force: true });
+    console.log('✅ All old data wiped cleanly & fresh tables created.\n');
+
+    // 1. Create Admins
+    const admin1 = await User.create({
+      name: 'CreatorLens Admin',
+      email: 'admin@gmail.com',
+      password: 'Admin@12345',
       role: 'admin',
       isVerified: true
     });
-    console.log('✅ Admin created: admin@demo.com / MD123456');
 
-    // Create Brands
-    const brand1 = await User.create({
-      name: 'TechCorp India',
-      email: 'brand@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
+    const admin2 = await User.create({
+      name: 'Super Admin',
+      email: 'creatorlens.admin@gmail.com',
+      password: 'Admin@12345',
+      role: 'admin',
+      isVerified: true
+    });
+    console.log('👑 Admin Accounts Created:');
+    console.log('   - admin@gmail.com / Admin@12345');
+    console.log('   - creatorlens.admin@gmail.com / Admin@12345\n');
+
+    // 2. Create Brands (all @gmail.com)
+    const brandsData = [
+      {
+        name: 'TechCorp India',
+        email: 'techcorp.india@gmail.com',
+        password: 'Brand@12345',
         companyName: 'TechCorp India',
         industry: 'Technology',
         website: 'https://techcorp.in',
-        description: 'Leading tech company in India specializing in mobile apps and software solutions.',
-        location: 'Bangalore, India',
-        campaignCount: 3
-      }
-    });
-
-    const brand2 = await User.create({
-      name: 'Nike India',
-      email: 'nike@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
-        companyName: 'Nike India',
+        description: 'Leading tech company specializing in productivity apps and AI tools.',
+        location: 'Bangalore, India'
+      },
+      {
+        name: 'Nike India',
+        email: 'nike.india.brand@gmail.com',
+        password: 'Brand@12345',
+        companyName: 'Nike India Private Limited',
         industry: 'Sports & Apparel',
         website: 'https://nike.in',
-        description: 'Global leader in athletic footwear, apparel, equipment, and accessories.',
-        location: 'Mumbai, India',
-        campaignCount: 1
-      }
-    });
-
-    const brand3 = await User.create({
-      name: 'Zomato',
-      email: 'zomato@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
+        description: 'Global leader in athletic footwear, premium sports apparel, and accessories.',
+        location: 'Mumbai, India'
+      },
+      {
+        name: 'Zomato Marketing',
+        email: 'zomato.marketing@gmail.com',
+        password: 'Brand@12345',
         companyName: 'Zomato Limited',
         industry: 'Food & Beverage',
         website: 'https://zomato.com',
-        description: 'Leading online food delivery and restaurant discovery platform.',
-        location: 'Gurugram, India',
-        campaignCount: 1
-      }
-    });
-
-    const brand4 = await User.create({
-      name: 'Adidas India',
-      email: 'adidas@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
-        companyName: 'Adidas India',
-        industry: 'Sports & Lifestyle',
-        website: 'https://adidas.co.in',
-        description: 'Global sports brand designing and manufacturing footwear, sportswear, and equipment.',
-        location: 'New Delhi, India',
-        campaignCount: 0
-      }
-    });
-
-    const brand5 = await User.create({
-      name: 'Apple India',
-      email: 'apple@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
-        companyName: 'Apple India Private Limited',
-        industry: 'Consumer Electronics',
-        website: 'https://apple.com/in',
-        description: 'Designs, manufactures, and markets smartphones, personal computers, tablets, and wearables.',
-        location: 'Mumbai, India',
-        campaignCount: 0
-      }
-    });
-
-    const brand6 = await User.create({
-      name: 'Samsung India',
-      email: 'samsung@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
-        companyName: 'Samsung India Electronics',
-        industry: 'Consumer Electronics',
-        website: 'https://samsung.com/in',
-        description: 'Global leader in technology, mobile phones, home appliances, and semiconductors.',
-        location: 'Gurugram, India',
-        campaignCount: 0
-      }
-    });
-
-    const brand7 = await User.create({
-      name: 'Puma India',
-      email: 'puma@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
-        companyName: 'Puma India',
-        industry: 'Sports & Lifestyle',
-        website: 'https://puma.com',
-        description: 'Third largest sportswear manufacturer in the world designing and manufacturing shoes and clothing.',
-        location: 'Bangalore, India',
-        campaignCount: 0
-      }
-    });
-
-    const brand8 = await User.create({
-      name: 'boAt Lifestyle',
-      email: 'boat@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
+        description: 'Leading online food delivery and restaurant discovery platform across India.',
+        location: 'Gurugram, India'
+      },
+      {
+        name: 'boAt Lifestyle',
+        email: 'boat.collab@gmail.com',
+        password: 'Brand@12345',
         companyName: 'boAt Lifestyle',
         industry: 'Audio & Wearables',
         website: 'https://boat-lifestyle.com',
-        description: 'India’s fastest-growing audio brand specializing in earphones, headphones, and smart watches.',
-        location: 'New Delhi, India',
-        campaignCount: 0
-      }
-    });
-
-    const brand9 = await User.create({
-      name: 'Netflix India',
-      email: 'netflix@demo.com',
-      password: 'MD123456',
-      role: 'brand',
-      isVerified: true,
-      brandProfile: {
+        description: 'India fastest-growing audio brand specializing in wireless earphones and smart watches.',
+        location: 'New Delhi, India'
+      },
+      {
+        name: 'Apple India',
+        email: 'apple.india.collab@gmail.com',
+        password: 'Brand@12345',
+        companyName: 'Apple India Private Limited',
+        industry: 'Consumer Electronics',
+        website: 'https://apple.com/in',
+        description: 'Designs and manufactures iPhones, iPads, MacBooks, and creative digital tools.',
+        location: 'Mumbai, India'
+      },
+      {
+        name: 'Samsung India',
+        email: 'samsung.creatorhub@gmail.com',
+        password: 'Brand@12345',
+        companyName: 'Samsung India Electronics',
+        industry: 'Consumer Electronics',
+        website: 'https://samsung.com/in',
+        description: 'Global leader in smartphones, nightography cameras, and smart displays.',
+        location: 'Gurugram, India'
+      },
+      {
+        name: 'Puma India',
+        email: 'puma.india.brand@gmail.com',
+        password: 'Brand@12345',
+        companyName: 'Puma Sports India',
+        industry: 'Sports & Lifestyle',
+        website: 'https://puma.com',
+        description: 'Leading sports brand designing high-performance running shoes and workout wear.',
+        location: 'Bangalore, India'
+      },
+      {
+        name: 'Adidas India',
+        email: 'adidas.india.collab@gmail.com',
+        password: 'Brand@12345',
+        companyName: 'Adidas India',
+        industry: 'Sports & Lifestyle',
+        website: 'https://adidas.co.in',
+        description: 'Global sports brand designing iconic athletic footwear, streetwear, and gear.',
+        location: 'New Delhi, India'
+      },
+      {
+        name: 'Netflix India',
+        email: 'netflix.india.collab@gmail.com',
+        password: 'Brand@12345',
         companyName: 'Netflix India',
         industry: 'Entertainment',
         website: 'https://netflix.com',
-        description: 'Leading streaming entertainment service offering movies, TV series, and documentaries.',
-        location: 'Mumbai, India',
-        campaignCount: 0
+        description: 'Premier streaming entertainment service delivering movies, series, and viral shows.',
+        location: 'Mumbai, India'
       }
-    });
-    console.log('✅ Brands created.');
-
-    // Create Requested Creators
-    const creatorNames = ['MD', 'krish', 'tamanna', 'harshita', 'manav', 'ravi', 'smit', 'happy', 'hitiksha'];
-    const niches = [
-      ['Tech', 'Lifestyle'],
-      ['Fitness', 'Lifestyle'],
-      ['Fashion', 'Beauty'],
-      ['Travel', 'Food'],
-      ['Fashion', 'Lifestyle'],
-      ['Gaming', 'Tech'],
-      ['Education', 'Finance'],
-      ['Entertainment', 'Comedy'],
-      ['Art', 'Design']
     ];
-    const followerCounts = [150000, 45000, 95000, 120000, 85000, 250000, 60000, 310000, 75000];
-    const engagementRates = [4.5, 3.8, 5.2, 4.1, 4.8, 6.2, 5.9, 7.1, 4.9];
-    const aiScores = [85, 72, 88, 79, 81, 92, 86, 94, 80];
 
-    const creators = [];
+    const createdBrands = [];
+    for (const b of brandsData) {
+      const brand = await User.create({
+        name: b.name,
+        email: b.email,
+        password: b.password,
+        role: 'brand',
+        isVerified: true,
+        brandProfile: {
+          companyName: b.companyName,
+          industry: b.industry,
+          website: b.website,
+          description: b.description,
+          location: b.location,
+          campaignCount: 3
+        }
+      });
+      createdBrands.push(brand);
+    }
+    console.log(`🏢 Created ${createdBrands.length} Brand Accounts (@gmail.com)`);
 
-    for (let i = 0; i < creatorNames.length; i++) {
-      const name = creatorNames[i];
-      const email = `${name.toLowerCase()}@demo.com`;
+    // 3. Create Creators (all @gmail.com)
+    const creatorsData = [
+      {
+        name: 'Manav Patel',
+        email: 'dhameliyamanav@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Tech', 'Lifestyle'],
+        followers: 185000,
+        engagement: 5.4,
+        aiScore: 92,
+        bio: 'Tech enthusiast & digital creator testing the latest smartphones, developer setups, and lifestyle gadgets.'
+      },
+      {
+        name: 'MD Reviews',
+        email: 'md.creator.official@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Tech', 'Gaming'],
+        followers: 160000,
+        engagement: 4.8,
+        aiScore: 88,
+        bio: 'Honest gadgets reviews, unboxings, and smartphone comparisons.'
+      },
+      {
+        name: 'Krish Patel',
+        email: 'krish.fitness@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Fitness', 'Lifestyle'],
+        followers: 95000,
+        engagement: 4.2,
+        aiScore: 84,
+        bio: 'Fitness coach and wellness creator sharing daily workout routines and diet tips.'
+      },
+      {
+        name: 'Tamanna Sharma',
+        email: 'tamanna.fashion@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Fashion', 'Beauty'],
+        followers: 240000,
+        engagement: 6.1,
+        aiScore: 95,
+        bio: 'Fashion stylist sharing seasonal lookbooks, skincare regimens, and trend insights.'
+      },
+      {
+        name: 'Harshita Verma',
+        email: 'harshita.travel@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Travel', 'Food'],
+        followers: 130000,
+        engagement: 4.9,
+        aiScore: 86,
+        bio: 'Exploring hidden gems across India, local culinary experiences, and cinematic travel vlogs.'
+      },
+      {
+        name: 'Ravi Kumar',
+        email: 'ravi.gaming@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Gaming', 'Tech'],
+        followers: 320000,
+        engagement: 6.8,
+        aiScore: 94,
+        bio: 'Gaming streamer, esports commentator, and PC build enthusiast.'
+      },
+      {
+        name: 'Smit Shah',
+        email: 'smit.finance@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Education', 'Finance'],
+        followers: 88000,
+        engagement: 5.7,
+        aiScore: 89,
+        bio: 'Making personal finance, investing, and tech tools simple for young professionals.'
+      },
+      {
+        name: 'Happy Singh',
+        email: 'happy.comedy@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Entertainment', 'Comedy'],
+        followers: 410000,
+        engagement: 7.6,
+        aiScore: 96,
+        bio: 'Relatable comedy sketches, viral reels, and hilarious everyday observations.'
+      },
+      {
+        name: 'Hitiksha Dave',
+        email: 'hitiksha.design@gmail.com',
+        password: 'Creator@12345',
+        niche: ['Art', 'Design'],
+        followers: 115000,
+        engagement: 5.1,
+        aiScore: 87,
+        bio: 'Digital illustrator and visual designer sharing creative process and speedpaints.'
+      }
+    ];
+
+    const createdCreators = [];
+    for (const c of creatorsData) {
       const creator = await User.create({
-        name: name,
-        email: email,
-        password: 'MD123456',
+        name: c.name,
+        email: c.email,
+        password: c.password,
         role: 'creator',
         isVerified: true,
         creatorProfile: {
-          bio: `${name} is an active content creator sharing updates about ${niches[i].join(' and ')}.`,
-          niche: niches[i],
+          bio: c.bio,
+          niche: c.niche,
           location: 'Mumbai, India',
-          totalFollowers: followerCounts[i],
-          engagementRate: engagementRates[i],
-          aiScore: aiScores[i],
-          fakeFollowerPercentage: Math.floor(Math.random() * 5) + 3,
-          contentConsistency: Math.floor(Math.random() * 15) + 80,
-          isFeatured: i % 2 === 0,
-          collaborationCount: Math.floor(Math.random() * 10) + 4,
+          totalFollowers: c.followers,
+          engagementRate: c.engagement,
+          aiScore: c.aiScore,
+          fakeFollowerPercentage: Math.floor(Math.random() * 4) + 2,
+          contentConsistency: Math.floor(Math.random() * 10) + 88,
+          isFeatured: true,
+          collaborationCount: Math.floor(Math.random() * 8) + 5,
           socialLinks: {
-            instagram: { username: `${name.toLowerCase()}.official`, followers: Math.floor(followerCounts[i] * 0.7), url: 'https://instagram.com' },
-            youtube: { username: `${name} Vlogs`, subscribers: Math.floor(followerCounts[i] * 0.3), url: 'https://youtube.com' }
+            instagram: { username: `${c.name.toLowerCase().replace(/ /g, '_')}_official`, followers: Math.floor(c.followers * 0.65), url: 'https://instagram.com' },
+            youtube: { username: `${c.name} Official`, subscribers: Math.floor(c.followers * 0.35), url: 'https://youtube.com' }
           },
-          rateCard: { postRate: 12000, storyRate: 4000, videoRate: 20000 },
-          tags: niches[i].map(n => n.toLowerCase())
+          rateCard: { postRate: 15000, storyRate: 5000, videoRate: 25000 },
+          tags: c.niche.map(n => n.toLowerCase())
         }
       });
-      creators.push(creator);
-      console.log(`✅ Creator created: ${email} / MD123456`);
+      createdCreators.push(creator);
     }
+    console.log(`🎨 Created ${createdCreators.length} Creator Accounts (@gmail.com)`);
 
-    // Create campaigns dynamically for each brand (2 to 4 each)
-    const brands = [brand1, brand2, brand3, brand4, brand5, brand6, brand7, brand8, brand9];
-    let campaign1, campaign2;
-
-    const campaignTemplates = {
-      'TechCorp India': [
-        { title: 'Summer App Launch Campaign', desc: 'Looking for tech-savvy creators to showcase our new productivity app. We want authentic reviews and creative unboxing content.', niche: ['Tech', 'Lifestyle'], platforms: ['instagram', 'youtube'], budget: { min: 20000, max: 80000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 2 }, del: ['1 YouTube video', '3 Instagram Reels'] },
-        { title: 'SaaS Tool Walkthrough', desc: 'Promote our team collab features to professionals. Show how it simplifies project tracking.', niche: ['Tech', 'Education'], platforms: ['linkedin', 'youtube'], budget: { min: 15000, max: 60000, currency: 'INR' }, req: { minFollowers: 5000, minEngagement: 3 }, del: ['1 walkthrough post', '1 video review'] },
-        { title: 'AI Assistant Integration', desc: 'Demonstrate our new AI assistant automation features to save time.', niche: ['Tech'], platforms: ['twitter', 'youtube'], budget: { min: 30000, max: 90000, currency: 'INR' }, req: { minFollowers: 15000, minEngagement: 2 }, del: ['1 thread', '1 YouTube video'] }
-      ],
-      'Nike India': [
-        { title: 'Festive Fashion Collection', desc: 'Seeking fashion creators to feature our latest athletic wear collection for Diwali season.', niche: ['Fashion', 'Lifestyle'], platforms: ['instagram'], budget: { min: 10000, max: 50000, currency: 'INR' }, req: { minFollowers: 5000, minEngagement: 3 }, del: ['2 posts', '5 Reels'] },
-        { title: 'Marathon Run Footwear Campaign', desc: 'Promote our high-performance running shoes designed for marathons.', niche: ['Fitness', 'Lifestyle'], platforms: ['instagram', 'youtube'], budget: { min: 40000, max: 120000, currency: 'INR' }, req: { minFollowers: 20000, minEngagement: 4 }, del: ['1 YouTube vlog', '2 Reels'] },
-        { title: 'Air Max Streetwear Collab', desc: 'Showcase street fashion styling featuring our premium Air Max series.', niche: ['Fashion', 'Lifestyle'], platforms: ['instagram'], budget: { min: 30000, max: 80000, currency: 'INR' }, req: { minFollowers: 12000, minEngagement: 4.5 }, del: ['3 Reels', '5 Stories'] }
-      ],
-      'Zomato Limited': [
-        { title: 'Zomato Gold Food Tour', desc: 'Vloggers and food bloggers needed to cover the Zomato food tour experiences in major cities.', niche: ['Food', 'Travel'], platforms: ['instagram', 'youtube'], budget: { min: 30000, max: 90000, currency: 'INR' }, req: { minFollowers: 20000, minEngagement: 4 }, del: ['1 YouTube Vlog', '2 Instagram Reels'] },
-        { title: 'Late Night Delivery Craving', desc: 'Showcase Zomato’s 24/7 late-night delivery speed and food selection options.', niche: ['Food', 'Lifestyle'], platforms: ['instagram'], budget: { min: 15000, max: 45000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 3 }, del: ['2 Reels', '4 Stories'] },
-        { title: 'Home Cooking vs Ordering Out', desc: 'Make a fun, comparative Reel showing why ordering on Zomato saves time and effort during busy workdays.', niche: ['Food', 'Lifestyle'], platforms: ['instagram'], budget: { min: 20000, max: 55000, currency: 'INR' }, req: { minFollowers: 8000, minEngagement: 3.5 }, del: ['1 Reel', '2 Stories'] }
-      ],
-      'Adidas India': [
-        { title: 'Ultraboost Comfort Challenge', desc: 'Wear Ultraboost sneakers for 24 hours straight and document your daily step counts.', niche: ['Fitness', 'Lifestyle'], platforms: ['instagram', 'youtube'], budget: { min: 25000, max: 75000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 3.5 }, del: ['1 Reel', '1 Shorts video'] },
-        { title: 'Street Style Sportswear Haul', desc: 'Create a fashion lookbook showcasing our newest arrivals of tracksuits and hoodies.', niche: ['Fashion', 'Lifestyle'], platforms: ['instagram'], budget: { min: 20000, max: 60000, currency: 'INR' }, req: { minFollowers: 8000, minEngagement: 4 }, del: ['1 lookbook video', '3 posts'] },
-        { title: 'Workout Routine & Gear', desc: 'Share your daily workout regimen styled in full Adidas training wear.', niche: ['Fitness'], platforms: ['youtube'], budget: { min: 35000, max: 95000, currency: 'INR' }, req: { minFollowers: 15000, minEngagement: 3 }, del: ['1 workout video'] }
-      ],
-      'Apple India Private Limited': [
-        { title: 'iPhone Cinematography Masterclass', desc: 'Shoot a high-quality cinematic mini-vlog entirely on the latest iPhone 15 Pro.', niche: ['Tech', 'Travel'], platforms: ['youtube', 'instagram'], budget: { min: 50000, max: 150000, currency: 'INR' }, req: { minFollowers: 30000, minEngagement: 5 }, del: ['1 cinematic vlog', '2 Reels'] },
-        { title: 'iPad Pro Digital Art Challenge', desc: 'Draw a stunning illustration on iPad Pro using Apple Pencil and showcase the process.', niche: ['Art', 'Design'], platforms: ['instagram', 'tiktok'], budget: { min: 30000, max: 90000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 6 }, del: ['1 speedpaint video', '1 story set'] }
-      ],
-      'Samsung India Electronics': [
-        { title: 'Galaxy Nightography Challenge', desc: 'Capture stunning low-light photos and videos in city nightscapes using Galaxy Zoom.', niche: ['Tech', 'Lifestyle'], platforms: ['instagram'], budget: { min: 25000, max: 85000, currency: 'INR' }, req: { minFollowers: 12000, minEngagement: 4 }, del: ['3 posts', '2 Reels'] },
-        { title: 'Foldable Screen Multitasking', desc: 'Show how the Galaxy Z Fold improves your productivity and daily multitasking.', niche: ['Tech'], platforms: ['youtube'], budget: { min: 40000, max: 110000, currency: 'INR' }, req: { minFollowers: 20000, minEngagement: 3 }, del: ['1 YouTube review'] },
-        { title: 'SmartThings Smart Home Tour', desc: 'Set up automated home appliances using Samsung SmartThings integration.', niche: ['Tech', 'Lifestyle'], platforms: ['youtube', 'instagram'], budget: { min: 50000, max: 130000, currency: 'INR' }, req: { minFollowers: 25000, minEngagement: 2.5 }, del: ['1 home tour video'] }
-      ],
-      'Puma India': [
-        { title: 'Puma Running Club Meetup', desc: 'Document your local running club experience wearing the new Nitro series.', niche: ['Fitness', 'Travel'], platforms: ['instagram'], budget: { min: 15000, max: 45000, currency: 'INR' }, req: { minFollowers: 8000, minEngagement: 3.8 }, del: ['1 Reel', '3 Stories'] },
-        { title: 'Gym wear Lookbook', desc: 'A styling guide for high-impact workout clothing featuring breathable fabrics.', niche: ['Fashion', 'Fitness'], platforms: ['instagram', 'tiktok'], budget: { min: 20000, max: 55000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 4.2 }, del: ['1 Reel', '2 posts'] }
-      ],
-      'boAt Lifestyle': [
-        { title: 'boAt ANC Headphone Sound Test', desc: 'Create a sound test and active noise cancellation review in loud public spaces.', niche: ['Tech', 'Lifestyle'], platforms: ['youtube', 'instagram'], budget: { min: 18000, max: 50000, currency: 'INR' }, req: { minFollowers: 10000, minEngagement: 3 }, del: ['1 review video', '2 Reels'] },
-        { title: 'Smartwatch Fitness Tracking', desc: 'Track your heart rate, steps, and sports modes over 3 days using our smartwatch.', niche: ['Fitness', 'Tech'], platforms: ['instagram'], budget: { min: 12000, max: 35000, currency: 'INR' }, req: { minFollowers: 5000, minEngagement: 4 }, del: ['1 Reel', '3 Stories'] },
-        { title: 'Party Speaker Bass Test', desc: 'Throw a rooftop house party and showcase the volume and bass output of our speaker.', niche: ['Entertainment', 'Lifestyle'], platforms: ['youtube'], budget: { min: 30000, max: 70000, currency: 'INR' }, req: { minFollowers: 15000, minEngagement: 5 }, del: ['1 party vlog'] }
-      ],
-      'Netflix India': [
-        { title: 'Watch Party Reaction Vlog', desc: 'Record authentic, funny reactions during the season finale release of our show.', niche: ['Entertainment', 'Comedy'], platforms: ['youtube'], budget: { min: 25000, max: 75000, currency: 'INR' }, req: { minFollowers: 15000, minEngagement: 6 }, del: ['1 reaction video'] },
-        { title: 'Netflix Recommendation List', desc: 'Recommend 5 hidden gems/underrated series to watch this weekend.', niche: ['Entertainment', 'Lifestyle'], platforms: ['instagram', 'twitter'], budget: { min: 10000, max: 30000, currency: 'INR' }, req: { minFollowers: 5000, minEngagement: 5 }, del: ['1 carousel post', '1 thread'] },
-        { title: 'Cosplay & Fan Art Showcase', desc: 'Dress up as characters from popular Netflix series and showcase the outfit transition.', niche: ['Art', 'Design', 'Fashion'], platforms: ['instagram', 'tiktok'], budget: { min: 20000, max: 60000, currency: 'INR' }, req: { minFollowers: 8000, minEngagement: 5.5 }, del: ['2 transition Reels'] }
-      ]
-    };
-
-    console.log('⏳ Generating 2 to 4 campaigns for each brand...');
-
-    for (const brand of brands) {
-      const companyName = brand.brandProfile?.companyName;
-      const templates = campaignTemplates[companyName] || [];
-      // Ensure each brand gets 2 to 4 campaigns
-      const count = Math.min(templates.length, Math.floor(Math.random() * 3) + 2); // random count 2, 3 or max templates
-
-      for (let j = 0; j < count; j++) {
-        const t = templates[j];
-        const campaign = await Campaign.create({
-          brandId: brand.id,
-          title: t.title,
-          description: t.desc,
-          niche: t.niche,
-          platforms: t.platforms,
-          budget: t.budget,
-          requirements: { minFollowers: t.req.minFollowers, minEngagement: t.req.minEngagement, location: ['India'] },
-          deliverables: t.del,
-          status: 'active',
-          views: Math.floor(Math.random() * 200) + 50,
-          isBoosted: j === 0,
-          tags: t.niche.map(n => n.toLowerCase())
-        });
-
-        // Save references for linking the application objects
-        if (brand.id === brand1.id && j === 0) campaign1 = campaign;
-        if (brand.id === brand2.id && j === 0) campaign2 = campaign;
+    // 4. Create Active Campaigns
+    const campaignsData = [
+      {
+        brand: createdBrands[0], // TechCorp
+        title: 'Summer AI Productivity App Showcase',
+        description: 'Seeking tech and lifestyle creators to review our new AI workspace app. Produce authentic workflow demonstrations and reel shorts.',
+        niche: ['Tech', 'Lifestyle'],
+        platforms: ['instagram', 'youtube'],
+        budget: { min: 25000, max: 80000, currency: 'INR' },
+        req: { minFollowers: 10000, minEngagement: 3 },
+        del: ['1 YouTube Dedicated Video', '2 Instagram Reels']
+      },
+      {
+        brand: createdBrands[1], // Nike
+        title: 'Air Max Streetwear & Marathon Series',
+        description: 'Showcase authentic street style combinations and marathon durability featuring the newest Air Max and Zoom runners.',
+        niche: ['Fashion', 'Fitness'],
+        platforms: ['instagram'],
+        budget: { min: 40000, max: 120000, currency: 'INR' },
+        req: { minFollowers: 25000, minEngagement: 4 },
+        del: ['3 High-energy Reels', '5 Story Mentions']
+      },
+      {
+        brand: createdBrands[2], // Zomato
+        title: 'Late-Night Cravings & Zomato Gold Tour',
+        description: 'Vloggers and food bloggers to feature our instant late-night delivery speed and top restaurant partners.',
+        niche: ['Food', 'Lifestyle'],
+        platforms: ['instagram', 'youtube'],
+        budget: { min: 20000, max: 65000, currency: 'INR' },
+        req: { minFollowers: 15000, minEngagement: 3.5 },
+        del: ['1 YouTube Food Vlog', '2 Instagram Reels']
+      },
+      {
+        brand: createdBrands[3], // boAt
+        title: 'boAt ANC Wireless Audio Blast Challenge',
+        description: 'High-energy audio experience test comparing ambient sound vs active noise cancellation in crowded metros and cafes.',
+        niche: ['Tech', 'Entertainment'],
+        platforms: ['youtube', 'instagram'],
+        budget: { min: 30000, max: 90000, currency: 'INR' },
+        req: { minFollowers: 20000, minEngagement: 4 },
+        del: ['1 Review Video', '3 Shorts/Reels']
+      },
+      {
+        brand: createdBrands[4], // Apple
+        title: 'Shot on iPhone 15 Pro Cinematic Masterclass',
+        description: 'Create a cinematic travel or creative montage recorded entirely on the iPhone 15 Pro in ProRes color profile.',
+        niche: ['Tech', 'Travel', 'Art'],
+        platforms: ['youtube', 'instagram'],
+        budget: { min: 60000, max: 180000, currency: 'INR' },
+        req: { minFollowers: 40000, minEngagement: 5 },
+        del: ['1 Cinematic Vlog', '3 Instagram Reels']
+      },
+      {
+        brand: createdBrands[5], // Samsung
+        title: 'Galaxy Nightography Urban Cityscapes',
+        description: 'Capture low-light city night scenes and zoom shots illustrating night photography clarity.',
+        niche: ['Tech', 'Lifestyle'],
+        platforms: ['instagram'],
+        budget: { min: 35000, max: 100000, currency: 'INR' },
+        req: { minFollowers: 15000, minEngagement: 4 },
+        del: ['3 Carousel Posts', '2 Reels']
+      },
+      {
+        brand: createdBrands[6], // Puma
+        title: 'Puma Running Club & Gymwear Lookbook',
+        description: 'Document weekend community running sessions and high-intensity gym wear styling.',
+        niche: ['Fitness', 'Fashion'],
+        platforms: ['instagram', 'tiktok'],
+        budget: { min: 25000, max: 70000, currency: 'INR' },
+        req: { minFollowers: 12000, minEngagement: 3.5 },
+        del: ['2 Workout Reels', '4 Stories']
+      },
+      {
+        brand: createdBrands[8], // Netflix
+        title: 'Weekend Binge Watchlist & Reaction Vlog',
+        description: 'Record authentic, funny reaction vlogs and recommend top must-watch thriller and comedy titles.',
+        niche: ['Entertainment', 'Comedy'],
+        platforms: ['youtube', 'instagram'],
+        budget: { min: 30000, max: 85000, currency: 'INR' },
+        req: { minFollowers: 20000, minEngagement: 5 },
+        del: ['1 Reaction Video', '2 Reels']
       }
-    }
-    console.log('✅ Campaigns created.');
+    ];
 
-    // Create Applications
-    // Let MD (creators[0]) apply to campaign1
+    const createdCampaigns = [];
+    for (const c of campaignsData) {
+      const camp = await Campaign.create({
+        brandId: c.brand.id,
+        title: c.title,
+        description: c.description,
+        niche: c.niche,
+        platforms: c.platforms,
+        budget: c.budget,
+        requirements: { minFollowers: c.req.minFollowers, minEngagement: c.req.minEngagement, location: ['India'] },
+        deliverables: c.del,
+        status: 'active',
+        views: Math.floor(Math.random() * 250) + 100,
+        isBoosted: true,
+        tags: c.niche.map(n => n.toLowerCase())
+      });
+      createdCampaigns.push(camp);
+    }
+    console.log(`📢 Created ${createdCampaigns.length} Active Campaigns`);
+
+    // 5. Create Applications
     const app1 = await Application.create({
-      campaignId: campaign1.id,
-      creatorId: creators[0].id,
-      brandId: brand1.id,
-      proposal: 'I would love to make an engaging productivity video showing a day in my life using your application.',
+      campaignId: createdCampaigns[0].id,
+      creatorId: createdCreators[0].id, // Manav Patel
+      brandId: createdBrands[0].id,
+      proposal: 'I would love to make an in-depth productivity workflow video demonstrating your AI application in action with high engagement.',
+      proposedRate: 45000,
+      deliverables: ['1 YouTube Dedicated Video', '2 Instagram Reels'],
+      timeline: '10 days',
+      status: 'accepted',
+      dealAmount: 45000
+    });
+
+    const app2 = await Application.create({
+      campaignId: createdCampaigns[1].id,
+      creatorId: createdCreators[3].id, // Tamanna Sharma
+      brandId: createdBrands[1].id,
+      proposal: 'I will create high-fashion aesthetic Reels featuring the Air Max collection styled with contemporary streetwear.',
+      proposedRate: 50000,
+      deliverables: ['3 High-energy Reels', '5 Story Mentions'],
+      timeline: '14 days',
+      status: 'completed',
+      dealAmount: 50000,
+      completedAt: new Date()
+    });
+
+    const app3 = await Application.create({
+      campaignId: createdCampaigns[3].id,
+      creatorId: createdCreators[1].id, // MD Reviews
+      brandId: createdBrands[3].id,
+      proposal: 'I will create an unboxing and audio comparison video testing the ANC in busy public spots.',
       proposedRate: 35000,
-      deliverables: ['1 YouTube review video', '3 Instagram Reels'],
-      timeline: '2 weeks',
+      deliverables: ['1 Review Video', '3 Shorts/Reels'],
+      timeline: '7 days',
       status: 'accepted',
       dealAmount: 35000
     });
+    console.log('📝 Created Sample Applications.');
 
-    // Let manav (creators[4]) apply to campaign2
-    const app2 = await Application.create({
-      campaignId: campaign2.id,
-      creatorId: creators[4].id,
-      brandId: brand2.id,
-      proposal: 'I will create stunning Reels displaying the outfit combinations for the Diwali season.',
-      proposedRate: 20000,
-      deliverables: ['2 Instagram posts', '5 Reels'],
-      timeline: '10 days',
-      status: 'completed',
-      dealAmount: 20000,
-      completedAt: new Date()
-    });
-    console.log('✅ Applications created.');
-
-    // Create Payments
+    // 6. Create Payments
     await Payment.create({
       applicationId: app1.id,
-      campaignId: campaign1.id,
-      brandId: brand1.id,
-      creatorId: creators[0].id,
-      amount: 35000,
-      platformFee: 3500,
-      creatorAmount: 31500,
+      campaignId: createdCampaigns[0].id,
+      brandId: createdBrands[0].id,
+      creatorId: createdCreators[0].id,
+      amount: 45000,
+      platformFee: 4500,
+      creatorAmount: 40500,
       status: 'held',
-      paymentMethod: { type: 'card', last4: '1111' },
+      paymentMethod: { type: 'card', last4: '4242' },
       paidAt: new Date(),
       heldAt: new Date()
     });
 
     await Payment.create({
       applicationId: app2.id,
-      campaignId: campaign2.id,
-      brandId: brand2.id,
-      creatorId: creators[4].id,
-      amount: 20000,
-      platformFee: 2000,
-      creatorAmount: 18000,
+      campaignId: createdCampaigns[1].id,
+      brandId: createdBrands[1].id,
+      creatorId: createdCreators[3].id,
+      amount: 50000,
+      platformFee: 5000,
+      creatorAmount: 45000,
       status: 'released',
-      paymentMethod: { type: 'upi', upiId: 'manav@okaxis' },
-      paidAt: new Date(Date.now() - 86400000 * 2),
-      heldAt: new Date(Date.now() - 86400000 * 2),
+      paymentMethod: { type: 'upi', upiId: 'tamanna@okhdfcbank' },
+      paidAt: new Date(Date.now() - 86400000 * 3),
+      heldAt: new Date(Date.now() - 86400000 * 3),
       releasedAt: new Date()
     });
-    console.log('✅ Payments created.');
+    console.log('💳 Created Sample Escrow & Released Payments.');
 
-    console.log('\n🎉 Demo data seeded successfully!');
-    console.log('\n📋 Demo Accounts (All Passwords are MD123456):');
-    console.log('   Admin:   admin@demo.com');
-    console.log('   Brands:  brand@demo.com, nike@demo.com, zomato@demo.com, adidas@demo.com, apple@demo.com, samsung@demo.com, puma@demo.com, boat@demo.com, netflix@demo.com');
-    for (let i = 0; i < creatorNames.length; i++) {
-      console.log(`   Creator: ${creatorNames[i].toLowerCase()}@demo.com`);
-    }
+    console.log('\n🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY!\n');
+    console.log('=====================================================');
+    console.log('👑 ADMIN LOGIN CREDENTIALS:');
+    console.log('   Email:    admin@gmail.com  (or creatorlens.admin@gmail.com)');
+    console.log('   Password: Admin@12345');
+    console.log('=====================================================');
+    console.log('🏢 BRAND ACCOUNTS (Password: Brand@12345):');
+    brandsData.forEach(b => console.log(`   - ${b.email}  (${b.name})`));
+    console.log('=====================================================');
+    console.log('🎨 CREATOR ACCOUNTS (Password: Creator@12345):');
+    creatorsData.forEach(c => console.log(`   - ${c.email}  (${c.name})`));
+    console.log('=====================================================');
 
   } catch (err) {
-    console.error('❌ Seed error:', err);
+    console.error('❌ Seeding Error:', err);
   } finally {
     await sequelize.close();
+    process.exit(0);
   }
 }
 

@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "db": "node view-db.js",
     "build": "npm --prefix backend install",
     "postinstall": "npm --prefix backend install"
   },
