@@ -77,7 +77,7 @@ router.post('/submit', auth, upload.array('files', 5), async (req, res) => {
       filename: f.originalname,
       fileType: f.mimetype,
       fileSize: f.size,
-      filePath: f.path,
+      filePath: `/uploads/content/${f.filename}`,
     }));
 
     const campaignId = application.campaignId !== undefined ? application.campaignId : application.campaign;
