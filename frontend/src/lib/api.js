@@ -13,10 +13,10 @@ const api = axios.create({
   timeout: 60000 // 60s timeout
 });
 
-// Add token to requests
+// Add token to requests from active session storage
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -29,6 +29,8 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password');
     if (error.response?.status === 401 && !isAuthRoute && typeof window !== 'undefined') {
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/auth/login';

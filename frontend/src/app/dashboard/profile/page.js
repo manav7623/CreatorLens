@@ -256,10 +256,10 @@ export default function ProfilePage() {
     try {
       const { data } = await api.post('/instagram/analyze', { username: igUsername.trim() });
       setResult(data.result);
-      // Update Redux + localStorage with fresh user
+      // Update Redux + sessionStorage with fresh user
       if (data.user) {
         dispatch(setUser(data.user));
-        localStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.setItem('user', JSON.stringify(data.user));
       }
       toast.success(`@${igUsername} analyzed! AI Score: ${data.result.mlScore.aiScore}/100`);
     } catch (err) {
