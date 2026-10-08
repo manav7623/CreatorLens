@@ -1,14 +1,31 @@
-const BACKEND_URL = process.env.RENDER_BACKEND_URL || process.env.BACKEND_INTERNAL_URL || 'http://localhost:5000/api';
+// Resolve backend URL dynamically with sensible production fallback
+function getBackendUrl() {
+  let url = process.env.RENDER_BACKEND_URL || 
+            process.env.BACKEND_INTERNAL_URL || 
+            process.env.BACKEND_URL ||
+            process.env.NEXT_PUBLIC_API_URL ||
+            (process.env.NODE_ENV === 'production' 
+              ? 'https://creatorlens-hydg.onrender.com/api' 
+              : 'http://localhost:5000/api');
+
+  url = url.trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url += '/api';
+  }
+  return url;
+}
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60s for backend wake up if Render instance is spinning up
 
 async function handler(req, { params }) {
   try {
+    const backendUrl = getBackendUrl();
     const pathSegments = params?.path || [];
     const subPath = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments;
     const { searchParams } = new URL(req.url);
     const queryString = searchParams.toString();
-    const targetUrl = `${BACKEND_URL}/${subPath}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `${backendUrl}/${subPath}${queryString ? `?${queryString}` : ''}`;
 
     const headers = new Headers();
     req.headers.forEach((value, key) => {
@@ -56,7 +73,11 @@ async function handler(req, { params }) {
     });
   } catch (error) {
     console.error('[API Gateway Error]:', error);
-    return new Response(JSON.stringify({ error: 'Backend server connection error: ' + error.message }), {
+    const isFetchFail = error.message?.includes('fetch failed');
+    const msg = isFetchFail 
+      ? 'Backend server is waking up or temporarily unreachable. Please try again in 10-20 seconds.' 
+      : 'Backend connection error: ' + error.message;
+    return new Response(JSON.stringify({ error: msg }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' }
     });
