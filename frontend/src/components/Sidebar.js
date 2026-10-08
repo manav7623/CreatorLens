@@ -7,7 +7,7 @@ import { logout } from '@/store/authSlice';
 import {
   LayoutDashboard, Megaphone, Users, MessageSquare,
   BarChart3, Settings, LogOut, Shield, Star, Briefcase,
-  UserCheck, CreditCard, Upload, Sun, Moon, Menu, X
+  UserCheck, CreditCard, Upload, Sun, Moon, Menu, X, Sparkles
 } from 'lucide-react';
 
 const creatorLinks = [
@@ -90,29 +90,33 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* 📱 Mobile Top Navigation Bar (Sticky with 3-line hamburger button) */}
-      <header className="lg:hidden sticky top-0 z-30 w-full glass bg-dark-900/90 backdrop-blur-md border-b border-dark-600 px-4 py-3 flex items-center justify-between">
+      {/* 📱 Mobile Top Navigation Bar */}
+      <header className="lg:hidden sticky top-0 z-30 w-full glass bg-dark-900/95 backdrop-blur-md px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => setIsOpen(true)}
-          className="p-2 -ml-2 rounded-xl text-gray-300 hover:text-white hover:bg-dark-700/70 active:scale-95 transition-all flex items-center justify-center focus:outline-none"
+          className="p-2 -ml-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/[0.06] active:scale-95 transition-all flex items-center justify-center focus:outline-none"
           aria-label="Open Navigation Menu"
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </button>
 
-        <Link href="/" className="flex items-center gap-2">
-          <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 20, background: 'linear-gradient(135deg, #4F63FF, #FFD166)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            CreatorLens
-          </span>
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary-600 to-accent-400 flex items-center justify-center shadow-md shadow-primary-500/20">
+            <Sparkles size={14} className="text-white" />
+          </div>
+          <div className="flex items-center font-extrabold text-base tracking-tight">
+            <span className="text-white">Creator</span>
+            <span className="text-accent-400">Lens</span>
+          </div>
         </Link>
 
         <div className="flex items-center gap-2">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-700/50 transition-colors"
+            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
             title="Toggle theme"
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
           <img
             src={getAvatar()}
@@ -133,56 +137,61 @@ export default function Sidebar() {
 
       {/* 🖥️/📱 Responsive Sidebar Drawer */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 w-72 lg:w-64 glass bg-dark-900/98 lg:bg-dark-900/80 border-r border-dark-600 flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 bottom-0 z-50 w-64 glass bg-dark-900/98 lg:bg-dark-900/80 flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Logo & Close Button (on mobile) */}
-        <div className="p-5 sm:p-6 border-b border-dark-600 flex items-center justify-between">
-          <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3">
-            <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 24, background: 'linear-gradient(135deg, #4F63FF, #FFD166)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              CreatorLens
-            </span>
+        {/* Logo Header (Cleanly aligned, no dividing line) */}
+        <div className="px-5 pt-6 pb-4 flex items-center justify-between">
+          <Link href="/" onClick={() => setIsOpen(false)} className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-accent-400 flex items-center justify-center shadow-md shadow-primary-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
+              <Sparkles size={16} className="text-white fill-white/20" />
+            </div>
+            <div className="flex items-center font-extrabold text-lg tracking-tight">
+              <span className="text-white">Creator</span>
+              <span className="text-accent-400">Lens</span>
+            </div>
           </Link>
 
           {/* Close button on mobile */}
           <button
             onClick={() => setIsOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-dark-700 transition-colors"
+            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
             aria-label="Close Navigation Menu"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* User Info */}
-        <div className="p-4 border-b border-dark-600">
-          <div className="flex items-center gap-3">
+        {/* User Card Pill (Clean floating pill, no dividing lines) */}
+        <div className="mx-3.5 mb-2 p-2.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] transition-all flex items-center gap-3">
+          <div className="relative flex-shrink-0">
             <img
               src={getAvatar()}
               alt={user?.name}
-              className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+              className="w-9 h-9 rounded-xl object-cover ring-1 ring-white/10"
             />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm truncate">{user?.name}</div>
-              <div className="flex items-center gap-1.5">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                  user?.role === 'admin' ? 'bg-red-500/20 text-red-400' :
-                  user?.role === 'brand' ? 'bg-blue-500/20 text-blue-400' :
-                  'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  {user?.role}
-                </span>
-                {user?.isVerified && (
-                  <Shield size={12} className="text-green-400" title="Verified" />
-                )}
-              </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-dark-900" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-xs text-white truncate">{user?.name}</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-medium ${
+                user?.role === 'admin' ? 'bg-red-500/20 text-red-400' :
+                user?.role === 'brand' ? 'bg-blue-500/20 text-blue-400' :
+                'bg-yellow-500/20 text-yellow-400'
+              }`}>
+                {user?.role}
+              </span>
+              {user?.isVerified && (
+                <Shield size={11} className="text-green-400" title="Verified" />
+              )}
             </div>
           </div>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto">
           {links.map(({ href, icon: Icon, label }) => {
             const isActive = pathname === href;
             return (
@@ -190,33 +199,33 @@ export default function Sidebar() {
                 key={href}
                 href={href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-dark-700'
+                    ? 'bg-primary-500/15 text-primary-400 font-semibold shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                <Icon size={18} style={{ flexShrink: 0 }} />
-                <span className="text-sm font-medium">{label}</span>
+                <Icon size={17} style={{ flexShrink: 0 }} />
+                <span className="text-sm">{label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Theme & Logout */}
-        <div className="p-4 border-t border-dark-600 space-y-1">
+        {/* Theme & Logout (Clean, no top dividing line) */}
+        <div className="p-3 space-y-1">
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-dark-700/50 transition-all w-full"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.04] transition-all w-full text-left"
           >
-            {theme === 'dark' ? <Sun size={18} style={{ flexShrink: 0 }} /> : <Moon size={18} style={{ flexShrink: 0 }} />}
+            {theme === 'dark' ? <Sun size={17} style={{ flexShrink: 0 }} /> : <Moon size={17} style={{ flexShrink: 0 }} />}
             <span className="text-sm font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full text-left"
           >
-            <LogOut size={18} style={{ flexShrink: 0 }} />
+            <LogOut size={17} style={{ flexShrink: 0 }} />
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
@@ -224,3 +233,4 @@ export default function Sidebar() {
     </>
   );
 }
+
