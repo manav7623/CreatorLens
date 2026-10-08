@@ -51,12 +51,42 @@ async function handler(req, { params }) {
       }
     }
 
-    const response = await fetch(targetUrl, {
-      method: req.method,
-      headers,
-      body,
-      cache: 'no-store'
-    });
+    let response = null;
+    let lastError = null;
+    const maxRetries = 2;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        response = await fetch(targetUrl, {
+          method: req.method,
+          headers,
+          body,
+          cache: 'no-store'
+        });
+
+        if (response.ok || (response.status < 500 && response.status !== 404)) {
+          break;
+        }
+
+        // If it's a 502/503/504, wait and retry
+        if ([502, 503, 504].includes(response.status) && attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          continue;
+        }
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!response && lastError) {
+      throw lastError;
+    }
 
     const responseData = await response.arrayBuffer();
     const resHeaders = new Headers();

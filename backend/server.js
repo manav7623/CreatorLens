@@ -170,4 +170,29 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  initKeepAlive();
 });
+
+// Keep-alive self-ping for free tier platforms (e.g. Render) to avoid inactivity sleep
+function initKeepAlive() {
+  const externalUrl = process.env.RENDER_EXTERNAL_URL || 
+                      process.env.BACKEND_URL || 
+                      process.env.SERVER_URL || 
+                      (process.env.NODE_ENV === 'production' ? 'https://creatorlens-hydg.onrender.com' : null);
+
+  if (externalUrl && !externalUrl.includes('localhost') && !externalUrl.includes('127.0.0.1')) {
+    const pingUrl = `${externalUrl.replace(/\/+$/, '')}/health`;
+    console.log(`[Keep-Alive] Initialized self-ping service every 10 mins: ${pingUrl}`);
+    
+    // Periodic ping every 10 minutes (Render spins down after 15 mins of inactivity)
+    setInterval(async () => {
+      try {
+        const res = await fetch(pingUrl);
+        console.log(`[Keep-Alive] Periodic ping status: ${res.status} at ${new Date().toISOString()}`);
+      } catch (err) {
+        console.warn(`[Keep-Alive] Ping error: ${err.message}`);
+      }
+    }, 10 * 60 * 1000);
+  }
+}
+
