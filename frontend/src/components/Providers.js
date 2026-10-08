@@ -4,12 +4,14 @@ import { store } from '@/store/store';
 import { Toaster } from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 import { restoreAuth } from '@/store/authSlice';
+import { prewarmBackend } from '@/lib/api';
 
 function AuthLoader({ children }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     store.dispatch(restoreAuth());
+    prewarmBackend();
     setMounted(true);
   }, []);
 

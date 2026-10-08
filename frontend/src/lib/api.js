@@ -1,8 +1,17 @@
 import axios from 'axios';
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    return '/api';
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    }
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl && !envUrl.includes('localhost')) {
+      const clean = envUrl.trim().replace(/\/+$/, '');
+      return clean.endsWith('/api') ? clean : `${clean}/api`;
+    }
+    return 'https://creatorlens-hydg.onrender.com/api';
   }
   return process.env.NEXT_PUBLIC_API_URL || 'https://creatorlens-hydg.onrender.com/api';
 };
@@ -10,7 +19,7 @@ const getBaseUrl = () => {
 const api = axios.create({
   baseURL: getBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
-  timeout: 60000 // 60s timeout
+  timeout: 90000 // 90s timeout to allow Render free-tier cold boot
 });
 
 // Add token to requests from active session storage
@@ -22,7 +31,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 errors for authenticated requests
+// Handle 401 errors and enrich timeout/network errors for cold-starts
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,8 +44,26 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/auth/login';
     }
+
+    if (!error.response && (error.code === 'ECONNABORTED' || error.message?.includes('Network Error') || error.message?.includes('timeout'))) {
+      error.message = 'Backend server is waking up (takes ~20-30s). Please wait a moment and try again.';
+    }
+
     return Promise.reject(error);
   }
 );
 
+// Non-blocking pre-warm ping to start spinning up Render free-tier instance on page load
+export const prewarmBackend = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const base = getBaseUrl().replace(/\/api\/?$/, '');
+      fetch(`${base}/health`, { mode: 'cors' }).catch(() => {});
+    } catch {
+      // ignore pre-warm error
+    }
+  }
+};
+
 export default api;
+
