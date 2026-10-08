@@ -4,7 +4,8 @@ import { useSelector } from 'react-redux';
 import api from '@/lib/api';
 import {
   BarChart3, TrendingUp, Star, Briefcase, Users,
-  CheckCircle, DollarSign, Eye, Zap, Sparkles, ArrowRight
+  CheckCircle, DollarSign, Eye, Zap, Sparkles, ArrowRight,
+  Megaphone
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
@@ -27,14 +28,23 @@ function StatCard({ icon: Icon, label, value, sub, color = 'text-primary-400', b
   );
 }
 
-function AIScoreWidget({ score, profile }) {
+function AIScoreWidget({ score = 0, profile = {} }) {
   const getRating = (s) => {
-    if (s >= 85) return { label: 'Top 5% Creator', color: 'text-emerald-400', stroke: '#10B981', badge: 'bg-emerald-500/15 text-emerald-400' };
-    if (s >= 70) return { label: 'High Authenticity', color: 'text-primary-400', stroke: '#6366F1', badge: 'bg-primary-500/15 text-primary-400' };
-    if (s >= 50) return { label: 'Good Potential', color: 'text-amber-400', stroke: '#F59E0B', badge: 'bg-amber-500/15 text-amber-400' };
+    const num = Number(s) || 0;
+    if (num >= 85) return { label: 'Top 5% Creator', color: 'text-emerald-400', stroke: '#10B981', badge: 'bg-emerald-500/15 text-emerald-400' };
+    if (num >= 70) return { label: 'High Authenticity', color: 'text-primary-400', stroke: '#6366F1', badge: 'bg-primary-500/15 text-primary-400' };
+    if (num >= 50) return { label: 'Good Potential', color: 'text-amber-400', stroke: '#F59E0B', badge: 'bg-amber-500/15 text-amber-400' };
     return { label: 'Needs Profile Setup', color: 'text-rose-400', stroke: '#F43F5E', badge: 'bg-rose-500/15 text-rose-400' };
   };
-  const rating = getRating(score);
+  const numScore = Number(score) || 0;
+  const rating = getRating(numScore);
+
+  const engagement = profile?.engagementRate !== undefined && profile?.engagementRate !== null
+    ? `${profile.engagementRate}%`
+    : '5.4%';
+  const realAudience = profile?.fakeFollowerPercentage !== undefined && profile?.fakeFollowerPercentage !== null
+    ? `${Math.max(0, 100 - profile.fakeFollowerPercentage)}%`
+    : '96%';
 
   return (
     <div className="glass rounded-2xl p-6 flex flex-col justify-between">
@@ -52,7 +62,7 @@ function AIScoreWidget({ score, profile }) {
 
       <div className="relative w-32 h-32 mx-auto flex items-center justify-center my-2">
         <div className="w-full h-full rounded-full flex flex-col items-center justify-center">
-          <div className={`text-4xl font-extrabold tracking-tight ${rating.color}`}>{score || 0}</div>
+          <div className={`text-4xl font-extrabold tracking-tight ${rating.color}`}>{numScore}</div>
           <span className="text-[10px] text-gray-400 uppercase font-mono tracking-wider">Score</span>
         </div>
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 128 128">
@@ -61,7 +71,7 @@ function AIScoreWidget({ score, profile }) {
             cx="64" cy="64" r="54" fill="none"
             stroke={rating.stroke}
             strokeWidth="9"
-            strokeDasharray={`${((score || 0) / 100) * 339} 339`}
+            strokeDasharray={`${(numScore / 100) * 339} 339`}
             strokeLinecap="round"
             style={{ filter: `drop-shadow(0 0 6px ${rating.stroke}66)` }}
           />
@@ -72,13 +82,13 @@ function AIScoreWidget({ score, profile }) {
         <div className="p-2.5 rounded-xl bg-white/[0.03] text-center">
           <div className="text-[11px] text-gray-400">Engagement</div>
           <div className="text-sm font-bold text-white mt-0.5">
-            {profile?.engagementRate ? `${profile.engagementRate}%` : '5.4%'}
+            {engagement}
           </div>
         </div>
         <div className="p-2.5 rounded-xl bg-white/[0.03] text-center">
           <div className="text-[11px] text-gray-400">Audience Real</div>
           <div className="text-sm font-bold text-emerald-400 mt-0.5">
-            {profile?.fakeFollowerPercentage !== undefined ? `${100 - profile.fakeFollowerPercentage}%` : '96%'}
+            {realAudience}
           </div>
         </div>
       </div>
@@ -118,31 +128,39 @@ export default function DashboardPage() {
   );
 
   const isCreator = user?.role === 'creator';
-  const profile = isCreator ? user?.creatorProfile : user?.brandProfile;
+  const profile = isCreator ? (user?.creatorProfile || {}) : (user?.brandProfile || {});
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const chartData = isCreator
-    ? stats?.monthlyData?.map(d => {
+    ? (Array.isArray(stats?.monthlyData) ? stats.monthlyData.map(d => {
         const m = d?._id?.month || 1;
         const y = d?._id?.year ? String(d._id.year).slice(-2) : '26';
         return {
           name: `${monthNames[m - 1] || 'Month'} '${y}`,
-          Applications: d?.count || 0
+          Applications: Number(d?.count) || 0
         };
-      })
-    : stats?.recentCampaigns?.map(c => ({
+      }) : [])
+    : (Array.isArray(stats?.recentCampaigns) ? stats.recentCampaigns.map(c => ({
         name: c?.title && typeof c.title === 'string' ? (c.title.length > 15 ? c.title.slice(0, 15) + '...' : c.title) : 'Campaign',
-        Views: c?.views || 0
-      }));
+        Views: Number(c?.views) || 0
+      })) : []);
+
   const hasChartData = isCreator
     ? (Array.isArray(stats?.monthlyData) && stats.monthlyData.length > 0)
     : (Array.isArray(stats?.recentCampaigns) && stats.recentCampaigns.length > 0);
 
-  const firstName = user?.name && typeof user.name === 'string' ? user.name.trim().split(' ')[0] : (isCreator ? 'Creator' : 'Brand');
+  const firstName = (typeof user?.name === 'string' && user.name.trim()) 
+    ? user.name.trim().split(' ')[0] 
+    : (isCreator ? 'Creator' : 'Brand');
+
+  const hasConnectedSocials = Boolean(
+    profile?.socialLinks?.instagram?.username || 
+    profile?.socialLinks?.youtube?.username
+  );
 
   return (
     <div className="space-y-8">
-      {/* Header (Clean, sleek, no underline dividers) */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -175,21 +193,21 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats Grid (Clean 4 cards, no underline dividing lines) */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {isCreator ? (
           <>
-            <StatCard icon={Briefcase} label="Total Applications" value={stats?.stats?.totalApplications || 0} color="text-blue-400" bg="bg-blue-500/15" />
-            <StatCard icon={CheckCircle} label="Accepted" value={stats?.stats?.acceptedApplications || 0} color="text-emerald-400" bg="bg-emerald-500/15" />
-            <StatCard icon={Star} label="Completed" value={stats?.stats?.completedCollabs || 0} color="text-amber-400" bg="bg-amber-500/15" />
-            <StatCard icon={DollarSign} label="Total Earnings" value={`₹${(stats?.stats?.totalEarnings || 0).toLocaleString()}`} color="text-purple-400" bg="bg-purple-500/15" />
+            <StatCard icon={Briefcase} label="Total Applications" value={Number(stats?.stats?.totalApplications) || 0} color="text-blue-400" bg="bg-blue-500/15" />
+            <StatCard icon={CheckCircle} label="Accepted" value={Number(stats?.stats?.acceptedApplications) || 0} color="text-emerald-400" bg="bg-emerald-500/15" />
+            <StatCard icon={Star} label="Completed" value={Number(stats?.stats?.completedCollabs) || 0} color="text-amber-400" bg="bg-amber-500/15" />
+            <StatCard icon={DollarSign} label="Total Earnings" value={`₹${(Number(stats?.stats?.totalEarnings) || 0).toLocaleString()}`} color="text-purple-400" bg="bg-purple-500/15" />
           </>
         ) : (
           <>
-            <StatCard icon={Megaphone} label="Total Campaigns" value={stats?.stats?.totalCampaigns || 0} color="text-blue-400" bg="bg-blue-500/15" />
-            <StatCard icon={TrendingUp} label="Active Campaigns" value={stats?.stats?.activeCampaigns || 0} color="text-emerald-400" bg="bg-emerald-500/15" />
-            <StatCard icon={Users} label="Applications" value={stats?.stats?.totalApplications || 0} color="text-amber-400" bg="bg-amber-500/15" />
-            <StatCard icon={DollarSign} label="Total Spend" value={`₹${(stats?.stats?.totalSpend || 0).toLocaleString()}`} color="text-purple-400" bg="bg-purple-500/15" />
+            <StatCard icon={Megaphone} label="Total Campaigns" value={Number(stats?.stats?.totalCampaigns) || 0} color="text-blue-400" bg="bg-blue-500/15" />
+            <StatCard icon={TrendingUp} label="Active Campaigns" value={Number(stats?.stats?.activeCampaigns) || 0} color="text-emerald-400" bg="bg-emerald-500/15" />
+            <StatCard icon={Users} label="Applications" value={Number(stats?.stats?.totalApplications) || 0} color="text-amber-400" bg="bg-amber-500/15" />
+            <StatCard icon={DollarSign} label="Total Spend" value={`₹${(Number(stats?.stats?.totalSpend) || 0).toLocaleString()}`} color="text-purple-400" bg="bg-purple-500/15" />
           </>
         )}
       </div>
@@ -235,8 +253,8 @@ export default function DashboardPage() {
         {/* AI Score (Creator) / Quick Actions (Brand) */}
         {isCreator ? (
           <AIScoreWidget
-            score={user?.creatorProfile?.aiScore || 0}
-            profile={user?.creatorProfile}
+            score={Number(user?.creatorProfile?.aiScore) || 0}
+            profile={user?.creatorProfile || {}}
           />
         ) : (
           <div className="glass rounded-2xl p-6">
@@ -285,8 +303,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Profile Setup Banner (Clean, no harsh underline) */}
-      {isCreator && (!profile?.socialLinks?.instagram?.username && !profile?.socialLinks?.youtube?.username) && (
+      {/* Profile Setup Banner */}
+      {isCreator && !hasConnectedSocials && (
         <div className="glass rounded-2xl p-6 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">

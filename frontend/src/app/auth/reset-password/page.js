@@ -22,6 +22,13 @@ function ResetPasswordForm() {
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
+    const paramEmail = searchParams.get('email');
+    const paramOtp = searchParams.get('otp');
+    if (paramEmail && !email) setEmail(paramEmail);
+    if (paramOtp && !otp) setOtp(paramOtp);
+  }, [searchParams]);
+
+  useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => prev - 1);

@@ -8,26 +8,27 @@ const { auth } = require('../middleware/auth');
 // Creator analytics
 router.get('/creator', auth, async (req, res) => {
   try {
-    const creator = await User.findById(req.user._id);
+    const userId = req.user._id || req.user.id;
+    const creator = await User.findById(userId);
     
-    const totalApplications = await Application.countDocuments({ creator: req.user._id });
+    const totalApplications = await Application.countDocuments({ creator: userId });
     const acceptedApplications = await Application.countDocuments({ 
-      creator: req.user._id, 
+      creator: userId, 
       status: 'accepted' 
     });
     const completedCollabs = await Application.countDocuments({
-      creator: req.user._id,
+      creator: userId,
       status: 'completed'
     });
     
     const earnings = await Application.aggregate([
-      { $match: { creator: req.user._id, status: 'completed' } },
+      { $match: { creator: userId, status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$dealAmount' } } }
     ]);
 
     // Monthly application trend
     const monthlyData = await Application.aggregate([
-      { $match: { creator: req.user._id } },
+      { $match: { creator: userId } },
       {
         $group: {
           _id: {
@@ -41,16 +42,18 @@ router.get('/creator', auth, async (req, res) => {
       { $limit: 6 }
     ]);
 
+    const creatorProfile = creator ? (typeof creator.creatorProfile === 'string' ? JSON.parse(creator.creatorProfile) : (creator.creatorProfile || {})) : {};
+
     res.json({
       stats: {
-        totalApplications,
-        acceptedApplications,
-        completedCollabs,
-        totalEarnings: earnings[0]?.total || 0,
+        totalApplications: totalApplications || 0,
+        acceptedApplications: acceptedApplications || 0,
+        completedCollabs: completedCollabs || 0,
+        totalEarnings: earnings?.[0]?.total || 0,
         successRate: totalApplications > 0 ? Math.round((acceptedApplications / totalApplications) * 100) : 0
       },
-      profile: creator.creatorProfile,
-      monthlyData
+      profile: creatorProfile,
+      monthlyData: Array.isArray(monthlyData) ? monthlyData : []
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -60,34 +63,35 @@ router.get('/creator', auth, async (req, res) => {
 // Brand analytics
 router.get('/brand', auth, async (req, res) => {
   try {
-    const totalCampaigns = await Campaign.countDocuments({ brand: req.user._id });
-    const activeCampaigns = await Campaign.countDocuments({ brand: req.user._id, status: 'active' });
-    const totalApplications = await Application.countDocuments({ brand: req.user._id });
+    const userId = req.user._id || req.user.id;
+    const totalCampaigns = await Campaign.countDocuments({ brand: userId });
+    const activeCampaigns = await Campaign.countDocuments({ brand: userId, status: 'active' });
+    const totalApplications = await Application.countDocuments({ brand: userId });
     const acceptedApplications = await Application.countDocuments({
-      brand: req.user._id,
+      brand: userId,
       status: 'accepted'
     });
 
     const totalSpend = await Application.aggregate([
-      { $match: { brand: req.user._id, status: { $in: ['accepted', 'completed'] } } },
+      { $match: { brand: userId, status: { $in: ['accepted', 'completed'] } } },
       { $group: { _id: null, total: { $sum: '$dealAmount' } } }
     ]);
 
     // Campaign performance
-    const campaigns = await Campaign.find({ brand: req.user._id })
+    const campaigns = await Campaign.find({ brand: userId })
       .select('title views status')
       .sort({ createdAt: -1 })
       .limit(5);
 
     res.json({
       stats: {
-        totalCampaigns,
-        activeCampaigns,
-        totalApplications,
-        acceptedApplications,
-        totalSpend: totalSpend[0]?.total || 0
+        totalCampaigns: totalCampaigns || 0,
+        activeCampaigns: activeCampaigns || 0,
+        totalApplications: totalApplications || 0,
+        acceptedApplications: acceptedApplications || 0,
+        totalSpend: totalSpend?.[0]?.total || 0
       },
-      recentCampaigns: campaigns
+      recentCampaigns: Array.isArray(campaigns) ? campaigns : []
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

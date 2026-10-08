@@ -17,7 +17,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    const existingUser = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -41,34 +42,58 @@ router.post('/register', async (req, res) => {
         fakeFollowerPercentage: fake,
         bio: 'Tech enthusiast, content creator, and gadget reviewer.',
         location: 'Mumbai, India',
+        rateCard: { postRate: 5000, storyRate: 2000, videoRate: 10000 },
         portfolio: []
       };
     }
 
-    const user = new User({ name, email, password, role, creatorProfile });
+    let brandProfile = {};
+    if (role === 'brand') {
+      brandProfile = {
+        companyName: name.trim(),
+        industry: 'E-commerce',
+        website: '',
+        description: '',
+        location: 'Mumbai, India'
+      };
+    }
+
+    const user = new User({ 
+      name: name.trim(), 
+      email: cleanEmail, 
+      password, 
+      role, 
+      creatorProfile, 
+      brandProfile 
+    });
     await user.save();
 
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user.id || user._id },
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }
     );
+
+    const safeCreatorProfile = typeof user.creatorProfile === 'string' ? JSON.parse(user.creatorProfile) : (user.creatorProfile || creatorProfile);
+    const safeBrandProfile = typeof user.brandProfile === 'string' ? JSON.parse(user.brandProfile) : (user.brandProfile || brandProfile);
 
     res.status(201).json({
       message: 'Registration successful',
       token,
       user: {
-        id: user._id,
+        id: user.id || user._id,
+        _id: user.id || user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        creatorProfile: user.creatorProfile,
-        brandProfile: user.brandProfile
+        creatorProfile: safeCreatorProfile,
+        brandProfile: safeBrandProfile,
+        isVerified: user.isVerified || false
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Registration failed' });
   }
 });
 
@@ -76,8 +101,12 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
 
-    const user = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
     if (user.isBanned) return res.status(403).json({ error: 'Account has been banned' });
@@ -86,27 +115,31 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user.id || user._id },
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }
     );
+
+    const safeCreatorProfile = typeof user.creatorProfile === 'string' ? JSON.parse(user.creatorProfile) : (user.creatorProfile || {});
+    const safeBrandProfile = typeof user.brandProfile === 'string' ? JSON.parse(user.brandProfile) : (user.brandProfile || {});
 
     res.json({
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        id: user.id || user._id,
+        _id: user.id || user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        creatorProfile: user.creatorProfile,
-        brandProfile: user.brandProfile,
-        isVerified: user.isVerified
+        creatorProfile: safeCreatorProfile,
+        brandProfile: safeBrandProfile,
+        isVerified: user.isVerified || false
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Login failed' });
   }
 });
 
@@ -169,15 +202,17 @@ router.post('/reset-password', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanOtp = String(otp).trim();
 
-    const emailCheck = await User.findOne({ email: cleanEmail });
-    if (!emailCheck) {
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
       return res.status(404).json({ error: 'No account found with this email address.' });
     }
 
-    const user = await User.findOne({ email: cleanEmail, resetPasswordToken: cleanOtp });
+    if (!user.resetPasswordToken || String(user.resetPasswordToken).trim() !== cleanOtp) {
+      return res.status(400).json({ error: 'Incorrect OTP code. Please check your email and enter the valid 6-digit code.' });
+    }
 
-    if (!user || !user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) {
-      return res.status(400).json({ error: 'Invalid or expired OTP code. Please request a new code.' });
+    if (!user.resetPasswordExpires || new Date(user.resetPasswordExpires).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
     }
 
     // Update password

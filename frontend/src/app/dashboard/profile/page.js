@@ -219,16 +219,81 @@ function AnalysisCard({ result }) {
   );
 }
 
-//Main Profile Page 
-export default function ProfilePage() {
+// Brand Profile Component
+function BrandProfileView({ user, onLogout }) {
   const dispatch = useDispatch();
-  
-  const handleLogout = () => {
-    dispatch(logout());
-    toast.success('Logged out successfully');
+  const [saving, setSaving] = useState(false);
+  const [brandForm, setBrandForm] = useState({
+    name:        user?.name || '',
+    companyName: user?.brandProfile?.companyName  || '',
+    industry:    user?.brandProfile?.industry     || '',
+    website:     user?.brandProfile?.website      || '',
+    description: user?.brandProfile?.description  || '',
+    location:    user?.brandProfile?.location     || '',
+  });
+
+  const saveBrand = async () => {
+    setSaving(true);
+    try {
+      await dispatch(updateProfile({ name: brandForm.name, brandProfile: brandForm }));
+      toast.success('Profile updated!');
+    } catch { toast.error('Update failed'); }
+    finally { setSaving(false); }
   };
 
-  const { user } = useSelector(state => state.auth);
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <div>
+        <h1 className="text-3xl font-bold mb-1">Brand Profile</h1>
+        <p className="text-gray-400">Manage your brand information</p>
+      </div>
+      <div className="glass rounded-2xl p-8 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Your Name</label>
+            <input className="input-field" value={brandForm.name} onChange={e=>setBrandForm({...brandForm,name:e.target.value})}/>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Company Name</label>
+            <input className="input-field" placeholder="Nike, Zomato…" value={brandForm.companyName} onChange={e=>setBrandForm({...brandForm,companyName:e.target.value})}/>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Industry</label>
+            <input className="input-field" placeholder="E-commerce, FMCG…" value={brandForm.industry} onChange={e=>setBrandForm({...brandForm,industry:e.target.value})}/>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Website</label>
+            <input className="input-field" placeholder="https://…" value={brandForm.website} onChange={e=>setBrandForm({...brandForm,website:e.target.value})}/>
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Location</label>
+          <input className="input-field" placeholder="Mumbai, India" value={brandForm.location} onChange={e=>setBrandForm({...brandForm,location:e.target.value})}/>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">About Company</label>
+          <textarea className="input-field h-28 resize-none" value={brandForm.description} onChange={e=>setBrandForm({...brandForm,description:e.target.value})}/>
+        </div>
+        <div className="flex gap-4">
+          <button onClick={saveBrand} disabled={saving} className="btn-primary flex items-center gap-2">
+            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Save size={16}/>}
+            Save Profile
+          </button>
+          <button onClick={onLogout} className="px-5 py-2.5 rounded-xl border border-red-500/50 hover:bg-red-500/10 text-red-400 font-semibold transition-all flex items-center gap-2">
+            <LogOut size={16}/>
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Creator Profile Component
+function CreatorProfileView({ user, onLogout }) {
+  const dispatch = useDispatch();
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [igUsername, setIgUsername] = useState(
@@ -240,15 +305,19 @@ export default function ProfilePage() {
     name:     user?.name || '',
     bio:      user?.creatorProfile?.bio      || '',
     location: user?.creatorProfile?.location || '',
-    niche:    user?.creatorProfile?.niche    || [],
-    rateCard: user?.creatorProfile?.rateCard || { postRate:0, storyRate:0, videoRate:0 },
+    niche:    Array.isArray(user?.creatorProfile?.niche) ? user.creatorProfile.niche : [],
+    rateCard: user?.creatorProfile?.rateCard || { postRate: 0, storyRate: 0, videoRate: 0 },
   });
 
-  const toggleNiche = n => setForm(p => ({
-    ...p, niche: p.niche.includes(n) ? p.niche.filter(x => x !== n) : [...p.niche, n]
-  }));
+  const toggleNiche = n => setForm(p => {
+    const currentNiche = Array.isArray(p.niche) ? p.niche : [];
+    return {
+      ...p,
+      niche: currentNiche.includes(n) ? currentNiche.filter(x => x !== n) : [...currentNiche, n]
+    };
+  });
 
-  //Analyze Instagram 
+  // Analyze Instagram
   const analyze = async () => {
     if (!igUsername.trim()) { toast.error('Enter an Instagram username'); return; }
     setAnalyzing(true);
@@ -256,7 +325,6 @@ export default function ProfilePage() {
     try {
       const { data } = await api.post('/instagram/analyze', { username: igUsername.trim() });
       setResult(data.result);
-      // Update Redux + storage with fresh user
       if (data.user) {
         dispatch(setUser(data.user));
         try {
@@ -264,7 +332,7 @@ export default function ProfilePage() {
           localStorage.setItem('user', JSON.stringify(data.user));
         } catch {}
       }
-      toast.success(`@${igUsername} analyzed! AI Score: ${data.result.mlScore.aiScore}/100`);
+      toast.success(`@${igUsername} analyzed! AI Score: ${data.result?.mlScore?.aiScore || 0}/100`);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Analysis failed. Check username and try again.');
     } finally {
@@ -272,7 +340,7 @@ export default function ProfilePage() {
     }
   };
 
-  //  Save Profile 
+  // Save Profile
   const saveCreator = async () => {
     setSaving(true);
     try {
@@ -290,63 +358,6 @@ export default function ProfilePage() {
     finally { setSaving(false); }
   };
 
-  //Brand Profile 
-  if (user?.role === 'brand') {
-    const [brandForm, setBrandForm] = useState({
-      name:        user?.name || '',
-      companyName: user?.brandProfile?.companyName  || '',
-      industry:    user?.brandProfile?.industry     || '',
-      website:     user?.brandProfile?.website      || '',
-      description: user?.brandProfile?.description  || '',
-      location:    user?.brandProfile?.location     || '',
-    });
-
-    const saveBrand = async () => {
-      setSaving(true);
-      try {
-        await dispatch(updateProfile({ name: brandForm.name, brandProfile: brandForm }));
-        toast.success('Profile updated!');
-      } catch { toast.error('Update failed'); }
-      finally { setSaving(false); }
-    };
-
-    return (
-      <div className="space-y-8 max-w-2xl">
-        <div><h1 className="text-3xl font-bold mb-1">Brand Profile</h1>
-          <p className="text-gray-400">Manage your brand information</p></div>
-        <div className="glass rounded-2xl p-8 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm text-gray-400 mb-2">Your Name</label>
-              <input className="input-field" value={brandForm.name} onChange={e=>setBrandForm({...brandForm,name:e.target.value})}/></div>
-            <div><label className="block text-sm text-gray-400 mb-2">Company Name</label>
-              <input className="input-field" placeholder="Nike, Zomato…" value={brandForm.companyName} onChange={e=>setBrandForm({...brandForm,companyName:e.target.value})}/></div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm text-gray-400 mb-2">Industry</label>
-              <input className="input-field" placeholder="E-commerce, FMCG…" value={brandForm.industry} onChange={e=>setBrandForm({...brandForm,industry:e.target.value})}/></div>
-            <div><label className="block text-sm text-gray-400 mb-2">Website</label>
-              <input className="input-field" placeholder="https://…" value={brandForm.website} onChange={e=>setBrandForm({...brandForm,website:e.target.value})}/></div>
-          </div>
-          <div><label className="block text-sm text-gray-400 mb-2">Location</label>
-            <input className="input-field" placeholder="Mumbai, India" value={brandForm.location} onChange={e=>setBrandForm({...brandForm,location:e.target.value})}/></div>
-          <div><label className="block text-sm text-gray-400 mb-2">About Company</label>
-            <textarea className="input-field h-28 resize-none" value={brandForm.description} onChange={e=>setBrandForm({...brandForm,description:e.target.value})}/></div>
-          <div className="flex gap-4">
-            <button onClick={saveBrand} disabled={saving} className="btn-primary flex items-center gap-2">
-              {saving?<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>:<Save size={16}/>}
-              Save Profile
-            </button>
-            <button onClick={handleLogout} className="px-5 py-2.5 rounded-xl border border-red-500/50 hover:bg-red-500/10 text-red-400 font-semibold transition-all flex items-center gap-2">
-              <LogOut size={16}/>
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  //Creator Profile 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -354,7 +365,7 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-bold mb-1">Creator Profile</h1>
           <p className="text-gray-400">Connect Instagram → AI analyzes real data → get your score</p>
         </div>
-        {user?.creatorProfile?.aiScore > 0 && (
+        {(user?.creatorProfile?.aiScore || 0) > 0 && (
           <div className="flex items-center gap-3 glass rounded-xl px-4 py-2">
             <Award size={17} className="text-accent-400"/>
             <span className="text-sm text-gray-400">AI Score:</span>
@@ -368,15 +379,18 @@ export default function ProfilePage() {
       <div className="grid lg:grid-cols-2 gap-6">
         {/* LEFT COLUMN */}
         <div className="space-y-5">
-
           {/* Basic Info */}
           <div className="glass rounded-2xl p-6 space-y-4">
             <h3 className="font-semibold text-lg">Basic Information</h3>
-            <div><label className="block text-sm text-gray-400 mb-2">Full Name</label>
-              <input className="input-field" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
-            <div><label className="block text-sm text-gray-400 mb-2">Bio</label>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Full Name</label>
+              <input className="input-field" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Bio</label>
               <textarea className="input-field h-24 resize-none" placeholder="Tell brands about yourself…"
-                value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})}/></div>
+                value={form.bio} onChange={e=>setForm({...form,bio:e.target.value})}/>
+            </div>
             <div>
               <label className="block text-sm text-gray-400 mb-2 flex items-center gap-1"><MapPin size={12}/> Location</label>
               <input className="input-field" placeholder="Mumbai, India"
@@ -387,7 +401,7 @@ export default function ProfilePage() {
               <div className="flex flex-wrap gap-2">
                 {NICHES.map(n=>(
                   <button key={n} type="button" onClick={()=>toggleNiche(n)}
-                    className={`text-xs px-3 py-1.5 rounded-lg transition-all ${form.niche.includes(n)?'bg-primary-500 text-white':'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}>
+                    className={`text-xs px-3 py-1.5 rounded-lg transition-all ${(form.niche || []).includes(n)?'bg-primary-500 text-white':'bg-dark-700 text-gray-400 hover:bg-dark-600'}`}>
                     {n}
                   </button>
                 ))}
@@ -395,7 +409,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* ─── Instagram Connect (ONLY platform) ─── */}
+          {/* Instagram Connect */}
           <div className="glass rounded-2xl p-6 border border-pink-500/20">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -408,7 +422,7 @@ export default function ProfilePage() {
                   Enter your public username → we fetch real data via API → ML model scores you
                 </p>
               </div>
-              {(result || user?.creatorProfile?.aiScore > 0) && (
+              {(result || (user?.creatorProfile?.aiScore || 0) > 0) && (
                 <div className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded-lg whitespace-nowrap">
                   <CheckCircle size={11}/> Connected
                 </div>
@@ -417,7 +431,6 @@ export default function ProfilePage() {
 
             <div className="flex gap-2">
               <div className="relative flex-1">
-                
                 <input
                   className="input-field pl-7 font-mono"
                   placeholder="your_instagram_username"
@@ -461,12 +474,11 @@ export default function ProfilePage() {
 
             <div className="mt-4 grid grid-cols-3 gap-2">
               {[
-                {  label:'Real API Data',   desc:'Live Instagram stats' },
-                {  label:'ML Model',        desc:'5-feature scoring'    },
-                {  label:'AI Score /100',   desc:'Brand-ready report'   },
-              ].map(({icon,label,desc})=>(
+                { label:'Real API Data', desc:'Live Instagram stats' },
+                { label:'ML Model', desc:'5-feature scoring' },
+                { label:'AI Score /100', desc:'Brand-ready report' },
+              ].map(({label,desc})=>(
                 <div key={label} className="bg-dark-700 rounded-xl p-3 text-center">
-                  <div className="text-xl mb-1">{icon}</div>
                   <div className="text-xs font-semibold text-gray-200">{label}</div>
                   <div className="text-xs text-gray-500">{desc}</div>
                 </div>
@@ -484,7 +496,7 @@ export default function ProfilePage() {
                 <div key={key}>
                   <label className="block text-xs text-gray-400 mb-2">{label}</label>
                   <input type="number" className="input-field text-sm" placeholder="₹5000"
-                    value={form.rateCard[key]||''} onChange={e=>setForm({...form,rateCard:{...form.rateCard,[key]:parseInt(e.target.value)||0}})}/>
+                    value={form.rateCard?.[key] || ''} onChange={e=>setForm({...form,rateCard:{...(form.rateCard || {}),[key]:parseInt(e.target.value)||0}})}/>
                 </div>
               ))}
             </div>
@@ -496,7 +508,7 @@ export default function ProfilePage() {
               {saving?<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>:<Save size={16}/>}
               Save Profile
             </button>
-            <button onClick={handleLogout}
+            <button onClick={onLogout}
               className="px-5 py-2.5 rounded-xl border border-red-500/50 hover:bg-red-500/10 text-red-400 font-semibold transition-all flex items-center justify-center gap-2">
               <LogOut size={16}/>
               Logout
@@ -540,3 +552,21 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+// Main Profile Page
+export default function ProfilePage() {
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    toast.success('Logged out successfully');
+  };
+
+  if (user?.role === 'brand') {
+    return <BrandProfileView user={user} onLogout={handleLogout} />;
+  }
+
+  return <CreatorProfileView user={user} onLogout={handleLogout} />;
+}
+

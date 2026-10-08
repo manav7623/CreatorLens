@@ -19,20 +19,37 @@ export default function LoginPage() {
       if (user.role === 'admin') router.push('/admin');
       else router.push('/dashboard');
     }
-  }, [user]);
+  }, [user, router]);
 
   useEffect(() => {
     if (error) {
-      toast.error(error);
+      const errorMsg = typeof error === 'string' ? error : (error?.message || 'Login failed');
+      toast.error(errorMsg);
       dispatch(clearError());
     }
-  }, [error]);
+  }, [error, dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(login(form));
-    if (result.meta.requestStatus === 'fulfilled') {
-      toast.success('Welcome back!');
+    if (!form.email.trim() || !form.password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+    try {
+      const result = await dispatch(login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password
+      }));
+      if (result.meta?.requestStatus === 'fulfilled') {
+        toast.success('Welcome back!');
+        if (result.payload?.user?.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    } catch (err) {
+      console.error('Login error:', err);
     }
   };
 

@@ -12,33 +12,63 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loading, error, user } = useSelector(state => state.auth);
+  
+  const roleParam = searchParams?.get?.('role');
+  const initialRole = (roleParam === 'brand' || roleParam === 'creator') ? roleParam : 'creator';
+
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
-    role: searchParams.get('role') || 'creator'
+    role: initialRole
   });
 
   useEffect(() => {
-    if (user) router.push('/dashboard');
-  }, [user]);
+    if (user) {
+      if (user.role === 'admin') router.push('/admin');
+      else router.push('/dashboard');
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (error) {
-      toast.error(error);
+      const errorMsg = typeof error === 'string' ? error : (error?.message || 'Registration failed');
+      toast.error(errorMsg);
       dispatch(clearError());
     }
-  }, [error]);
+  }, [error, dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error('Please enter your full name');
+      return;
+    }
+    if (!form.email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
     if (form.password.length < 6) {
       toast.error('Password must be at least 6 characters');
       return;
     }
-    const result = await dispatch(register(form));
-    if (result.meta.requestStatus === 'fulfilled') {
-      toast.success('Account created! Welcome to CreatorLens 🎉');
+    try {
+      const result = await dispatch(register({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role: form.role
+      }));
+      if (result.meta?.requestStatus === 'fulfilled') {
+        toast.success('Account created! Welcome to CreatorLens 🎉');
+        if (result.payload?.user?.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    } catch (err) {
+      console.error('Registration failed:', err);
     }
   };
 

@@ -30,7 +30,27 @@ function isValidEmail(email) {
 }
 
 const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
-  // Attempt 1: Port 587 with TLS/STARTTLS (Optimal for cloud providers like Render)
+  // Method 1: Gmail direct SSL on Port 465 (Fastest & most reliable for Gmail App Passwords)
+  try {
+    const transporterGmail = nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: senderEmail, pass: senderPass },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000
+    });
+    const info = await transporterGmail.sendMail(mailOptions);
+    console.log(`[Email Service Gmail/465] Sent to ${mailOptions.to}. Response: ${info.response}`);
+    return { success: true, messageId: info.messageId };
+  } catch (errGmail) {
+    console.warn(`[Email Service Gmail/465 warning]: ${errGmail.message}. Trying SMTP Port 587 fallback...`);
+  }
+
+  // Method 2: SMTP Port 587 with STARTTLS fallback
   try {
     const transporter587 = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -38,35 +58,16 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       secure: false,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 6000,
-      greetingTimeout: 6000,
-      socketTimeout: 8000
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000
     });
     const info = await transporter587.sendMail(mailOptions);
     console.log(`[Email Service 587] Sent to ${mailOptions.to}. Response: ${info.response}`);
     return { success: true, messageId: info.messageId };
   } catch (err587) {
-    console.warn(`[Email Service 587 warning]: ${err587.message}. Trying Port 465 fallback...`);
-  }
-
-  // Attempt 2: Port 465 with direct SSL
-  try {
-    const transporter465 = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: { user: senderEmail, pass: senderPass },
-      tls: { rejectUnauthorized: false },
-      connectionTimeout: 6000,
-      greetingTimeout: 6000,
-      socketTimeout: 8000
-    });
-    const info = await transporter465.sendMail(mailOptions);
-    console.log(`[Email Service 465] Sent to ${mailOptions.to}. Response: ${info.response}`);
-    return { success: true, messageId: info.messageId };
-  } catch (err465) {
-    console.warn(`[Email Service 465 warning]: ${err465.message}`);
-    throw err465;
+    console.warn(`[Email Service 587 warning]: ${err587.message}`);
+    throw err587;
   }
 };
 
@@ -82,7 +83,8 @@ const sendResetPasswordOTPEmail = async (toEmail, otp) => {
   const mailOptions = {
     from: `"CreatorLens Support" <${senderEmail}>`,
     to: toEmail,
-    subject: 'Password Reset OTP - CreatorLens',
+    subject: `Your CreatorLens Password Reset OTP: ${otp}`,
+    text: `Hello,\n\nYour 6-digit OTP code to reset your CreatorLens account password is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nAlternatively, you can reset your password directly using this link:\n${resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email.\n\nCreatorLens Team`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 30px 20px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 25px;">
@@ -139,3 +141,4 @@ const sendResetPasswordOTPEmail = async (toEmail, otp) => {
 };
 
 module.exports = { sendResetPasswordOTPEmail };
+

@@ -17,10 +17,12 @@ function sanitizeUrl(url) {
 
 export const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocalNetwork = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname);
     const envUrl = sanitizeUrl(process.env.NEXT_PUBLIC_API_URL);
 
-    if (isLocal) {
+    if (isLocalhost) {
       // If user explicitly forced remote API in dev
       if (process.env.NEXT_PUBLIC_FORCE_REMOTE_API === 'true' && envUrl) {
         const clean = envUrl.replace(/\/+$/, '');
@@ -32,6 +34,19 @@ export const getBaseUrl = () => {
         return clean.endsWith('/api') ? clean : `${clean}/api`;
       }
       return 'http://localhost:5000/api';
+    }
+
+    if (isLocalNetwork) {
+      // If mobile connected to local dev server
+      if (process.env.NEXT_PUBLIC_FORCE_REMOTE_API === 'true' && envUrl) {
+        const clean = envUrl.replace(/\/+$/, '');
+        return clean.endsWith('/api') ? clean : `${clean}/api`;
+      }
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        const clean = envUrl.replace(/\/+$/, '');
+        return clean.endsWith('/api') ? clean : `${clean}/api`;
+      }
+      return `http://${hostname}:5000/api`;
     }
 
     if (envUrl && !envUrl.includes('localhost')) {
@@ -51,9 +66,15 @@ export const getBaseUrl = () => {
 
 export const getSocketUrl = () => {
   if (typeof window !== 'undefined') {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isLocal && process.env.NEXT_PUBLIC_FORCE_REMOTE_API !== 'true') {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocalNetwork = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname);
+
+    if (isLocalhost && process.env.NEXT_PUBLIC_FORCE_REMOTE_API !== 'true') {
       return 'http://localhost:5000';
+    }
+    if (isLocalNetwork && process.env.NEXT_PUBLIC_FORCE_REMOTE_API !== 'true') {
+      return `http://${hostname}:5000`;
     }
   }
   const envSocket = sanitizeUrl(process.env.NEXT_PUBLIC_SOCKET_URL);

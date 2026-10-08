@@ -22,16 +22,67 @@ const safeStorage = {
   }
 };
 
+const sanitizeUser = (rawUser) => {
+  if (!rawUser || typeof rawUser !== 'object') return null;
+  const user = { ...rawUser };
+  
+  if (user._id && !user.id) user.id = user._id;
+  if (user.id && !user._id) user._id = user.id;
+
+  if (typeof user.creatorProfile === 'string') {
+    try {
+      user.creatorProfile = JSON.parse(user.creatorProfile);
+    } catch {
+      user.creatorProfile = {};
+    }
+  }
+  if (!user.creatorProfile || typeof user.creatorProfile !== 'object') {
+    user.creatorProfile = {};
+  }
+  if (!Array.isArray(user.creatorProfile.niche)) {
+    user.creatorProfile.niche = typeof user.creatorProfile.niche === 'string' ? [user.creatorProfile.niche] : [];
+  }
+  if (!user.creatorProfile.rateCard || typeof user.creatorProfile.rateCard !== 'object') {
+    user.creatorProfile.rateCard = { postRate: 0, storyRate: 0, videoRate: 0 };
+  }
+  if (!user.creatorProfile.socialLinks || typeof user.creatorProfile.socialLinks !== 'object') {
+    user.creatorProfile.socialLinks = {};
+  }
+
+  if (typeof user.brandProfile === 'string') {
+    try {
+      user.brandProfile = JSON.parse(user.brandProfile);
+    } catch {
+      user.brandProfile = {};
+    }
+  }
+  if (!user.brandProfile || typeof user.brandProfile !== 'object') {
+    user.brandProfile = {};
+  }
+
+  return user;
+};
+
+const getErrorMessage = (err, fallback) => {
+  if (!err) return fallback;
+  const raw = err.response?.data?.error || err.message || fallback;
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object') return raw.message || JSON.stringify(raw);
+  return String(raw);
+};
+
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     const { data } = await api.post('/auth/login', credentials);
     if (data?.token && data?.user) {
+      const cleanUser = sanitizeUser(data.user);
       safeStorage.setItem('token', data.token);
-      safeStorage.setItem('user', JSON.stringify(data.user));
+      safeStorage.setItem('user', JSON.stringify(cleanUser));
+      return { ...data, user: cleanUser };
     }
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || err.message || 'Login failed');
+    return rejectWithValue(getErrorMessage(err, 'Login failed'));
   }
 });
 
@@ -39,12 +90,14 @@ export const register = createAsyncThunk('auth/register', async (userData, { rej
   try {
     const { data } = await api.post('/auth/register', userData);
     if (data?.token && data?.user) {
+      const cleanUser = sanitizeUser(data.user);
       safeStorage.setItem('token', data.token);
-      safeStorage.setItem('user', JSON.stringify(data.user));
+      safeStorage.setItem('user', JSON.stringify(cleanUser));
+      return { ...data, user: cleanUser };
     }
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || err.message || 'Registration failed');
+    return rejectWithValue(getErrorMessage(err, 'Registration failed'));
   }
 });
 
@@ -52,11 +105,13 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
   try {
     const { data } = await api.put('/users/profile', profileData);
     if (data?.user) {
-      safeStorage.setItem('user', JSON.stringify(data.user));
+      const cleanUser = sanitizeUser(data.user);
+      safeStorage.setItem('user', JSON.stringify(cleanUser));
+      return { ...data, user: cleanUser };
     }
     return data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.error || err.message || 'Update failed');
+    return rejectWithValue(getErrorMessage(err, 'Update failed'));
   }
 });
 
@@ -81,9 +136,10 @@ const authSlice = createSlice({
     },
     clearError: (state) => { state.error = null; },
     setUser: (state, action) => {
-      state.user = action.payload;
-      if (action.payload) {
-        safeStorage.setItem('user', JSON.stringify(action.payload));
+      const cleanUser = sanitizeUser(action.payload);
+      state.user = cleanUser;
+      if (cleanUser) {
+        safeStorage.setItem('user', JSON.stringify(cleanUser));
       }
     },
     restoreAuth: (state) => {
@@ -92,7 +148,7 @@ const authSlice = createSlice({
           const userStr = safeStorage.getItem('user');
           const tokenStr = safeStorage.getItem('token');
           if (userStr && userStr !== 'undefined' && userStr !== 'null') {
-            state.user = JSON.parse(userStr);
+            state.user = sanitizeUser(JSON.parse(userStr));
           } else {
             state.user = null;
           }
@@ -110,8 +166,8 @@ const authSlice = createSlice({
       .addCase(login.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.user = sanitizeUser(action.payload?.user);
+        state.token = action.payload?.token || null;
         state.isInitialized = true;
       })
       .addCase(login.rejected, (state, action) => {
@@ -122,8 +178,8 @@ const authSlice = createSlice({
       .addCase(register.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(register.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.user = sanitizeUser(action.payload?.user);
+        state.token = action.payload?.token || null;
         state.isInitialized = true;
       })
       .addCase(register.rejected, (state, action) => {
@@ -132,7 +188,7 @@ const authSlice = createSlice({
         state.isInitialized = true;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        state.user = action.payload.user;
+        state.user = sanitizeUser(action.payload?.user);
       });
   }
 });
