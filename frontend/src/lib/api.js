@@ -69,7 +69,10 @@ const api = axios.create({
 // Add token to requests from active session storage
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    let token = null;
+    try {
+      token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    } catch {}
     if (token) config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -87,10 +90,12 @@ api.interceptors.response.use(
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password');
     
     if (error.response?.status === 401 && !isAuthRoute && typeof window !== 'undefined') {
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      try {
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } catch {}
       window.location.href = '/auth/login';
       return Promise.reject(error);
     }

@@ -23,8 +23,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${syne.variable} ${dmMono.variable}`}>
-      <body className="bg-dark-900 text-white font-sans antialiased">
+    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${dmMono.variable}`}>
+      <body suppressHydrationWarning className="bg-dark-900 text-white font-sans antialiased">
         <Providers>
           {children}
         </Providers>

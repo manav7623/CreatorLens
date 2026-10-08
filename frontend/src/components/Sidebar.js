@@ -50,13 +50,15 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    if (savedTheme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
+    try {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      setTheme(savedTheme);
+      if (savedTheme === 'light') {
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+      }
+    } catch {}
   }, []);
 
   // Close sidebar on route change
@@ -67,7 +69,9 @@ export default function Sidebar() {
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    try {
+      localStorage.setItem('theme', newTheme);
+    } catch {}
     if (newTheme === 'light') {
       document.documentElement.classList.add('light');
     } else {

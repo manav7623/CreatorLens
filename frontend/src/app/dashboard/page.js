@@ -90,6 +90,11 @@ export default function DashboardPage() {
   const { user } = useSelector(state => state.auth);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -117,17 +122,23 @@ export default function DashboardPage() {
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const chartData = isCreator
-    ? stats?.monthlyData?.map(d => ({
-        name: `${monthNames[d._id.month - 1] || 'Month'} '${d._id.year.toString().slice(-2)}`,
-        Applications: d.count
-      }))
+    ? stats?.monthlyData?.map(d => {
+        const m = d?._id?.month || 1;
+        const y = d?._id?.year ? String(d._id.year).slice(-2) : '26';
+        return {
+          name: `${monthNames[m - 1] || 'Month'} '${y}`,
+          Applications: d?.count || 0
+        };
+      })
     : stats?.recentCampaigns?.map(c => ({
-        name: c.title.length > 15 ? c.title.slice(0, 15) + '...' : c.title,
-        Views: c.views || 0
+        name: c?.title && typeof c.title === 'string' ? (c.title.length > 15 ? c.title.slice(0, 15) + '...' : c.title) : 'Campaign',
+        Views: c?.views || 0
       }));
   const hasChartData = isCreator
-    ? stats?.monthlyData?.length > 0
-    : stats?.recentCampaigns?.length > 0;
+    ? (Array.isArray(stats?.monthlyData) && stats.monthlyData.length > 0)
+    : (Array.isArray(stats?.recentCampaigns) && stats.recentCampaigns.length > 0);
+
+  const firstName = user?.name && typeof user.name === 'string' ? user.name.trim().split(' ')[0] : (isCreator ? 'Creator' : 'Brand');
 
   return (
     <div className="space-y-8">
@@ -140,7 +151,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Welcome back, <span className="gradient-text">{user?.name?.split(' ')[0]}</span> 👋
+            Welcome back, <span className="gradient-text">{firstName}</span> 👋
           </h1>
           <p className="text-gray-400 mt-1 text-sm sm:text-base">
             {isCreator ? 'Track your collaborations, performance & brand deals' : 'Manage your campaigns and find the perfect creators'}
@@ -194,7 +205,7 @@ export default function DashboardPage() {
             </h3>
             <span className="text-xs text-gray-500 font-mono">Monthly Overview</span>
           </div>
-          {hasChartData ? (
+          {hasChartData && isMounted ? (
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>

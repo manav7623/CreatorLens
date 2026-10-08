@@ -9,6 +9,11 @@ export default function AnalyticsPage() {
   const { user } = useSelector(state => state.auth);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetch = async () => {
@@ -22,7 +27,7 @@ export default function AnalyticsPage() {
         setLoading(false);
       }
     };
-    fetch();
+    if (user) fetch();
   }, [user]);
 
   if (loading) return (
@@ -74,11 +79,11 @@ export default function AnalyticsPage() {
         {/* Monthly Trend */}
         <div className="glass rounded-2xl p-6">
           <h3 className="font-semibold mb-4">Monthly Trend</h3>
-          {stats?.monthlyData?.length > 0 ? (
+          {stats?.monthlyData?.length > 0 && isMounted ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={stats.monthlyData.map(d => ({
-                name: `${d._id.month}/${d._id.year}`,
-                Applications: d.count
+                name: `${d?._id?.month || d?._id || '1'}/${d?._id?.year || '26'}`,
+                Applications: d?.count || 0
               }))}>
                 <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} />
                 <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} />
@@ -99,13 +104,15 @@ export default function AnalyticsPage() {
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <Zap size={16} className="text-primary-500" /> Creator Performance Radar
             </h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#22223A" />
-                <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Radar name="Score" dataKey="value" stroke="#4F63FF" fill="#4F63FF" fillOpacity={0.3} />
-              </RadarChart>
-            </ResponsiveContainer>
+            {isMounted ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#22223A" />
+                  <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                  <Radar name="Score" dataKey="value" stroke="#4F63FF" fill="#4F63FF" fillOpacity={0.3} />
+                </RadarChart>
+              </ResponsiveContainer>
+            ) : null}
           </div>
         ) : (
           <div className="glass rounded-2xl p-6">

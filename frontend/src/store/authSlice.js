@@ -1,14 +1,33 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '@/lib/api';
 
+const safeStorage = {
+  getItem: (key) => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return sessionStorage.getItem(key) || localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key, val) => {
+    if (typeof window === 'undefined') return;
+    try { sessionStorage.setItem(key, val); } catch {}
+    try { localStorage.setItem(key, val); } catch {}
+  },
+  removeItem: (key) => {
+    if (typeof window === 'undefined') return;
+    try { sessionStorage.removeItem(key); } catch {}
+    try { localStorage.removeItem(key); } catch {}
+  }
+};
+
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
     const { data } = await api.post('/auth/login', credentials);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    if (data?.token && data?.user) {
+      safeStorage.setItem('token', data.token);
+      safeStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -19,11 +38,9 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
 export const register = createAsyncThunk('auth/register', async (userData, { rejectWithValue }) => {
   try {
     const { data } = await api.post('/auth/register', userData);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    if (data?.token && data?.user) {
+      safeStorage.setItem('token', data.token);
+      safeStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -34,9 +51,8 @@ export const register = createAsyncThunk('auth/register', async (userData, { rej
 export const updateProfile = createAsyncThunk('auth/updateProfile', async (profileData, { rejectWithValue }) => {
   try {
     const { data } = await api.put('/users/profile', profileData);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('user', JSON.stringify(data.user));
+    if (data?.user) {
+      safeStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -44,58 +60,43 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
   }
 });
 
-const getInitialSession = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const user = sessionStorage.getItem('user') || localStorage.getItem('user');
-      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      if (user && token) {
-        return { user: JSON.parse(user), token, isInitialized: true };
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return { user: null, token: null, isInitialized: false };
+const initialState = {
+  user: null,
+  token: null,
+  loading: false,
+  error: null,
+  isInitialized: false,
 };
-
-const initialSession = getInitialSession();
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: {
-    user: initialSession.user,
-    token: initialSession.token,
-    loading: false,
-    error: null,
-    isInitialized: initialSession.isInitialized,
-  },
+  initialState,
   reducers: {
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isInitialized = true;
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('user');
     },
     clearError: (state) => { state.error = null; },
     setUser: (state, action) => {
       state.user = action.payload;
-      if (typeof window !== 'undefined' && action.payload) {
-        sessionStorage.setItem('user', JSON.stringify(action.payload));
+      if (action.payload) {
+        safeStorage.setItem('user', JSON.stringify(action.payload));
       }
     },
     restoreAuth: (state) => {
       if (typeof window !== 'undefined') {
         try {
-          const user = sessionStorage.getItem('user');
-          const token = sessionStorage.getItem('token');
-          state.user = user ? JSON.parse(user) : null;
-          state.token = token || null;
+          const userStr = safeStorage.getItem('user');
+          const tokenStr = safeStorage.getItem('token');
+          if (userStr && userStr !== 'undefined' && userStr !== 'null') {
+            state.user = JSON.parse(userStr);
+          } else {
+            state.user = null;
+          }
+          state.token = tokenStr || null;
         } catch {
           state.user = null;
           state.token = null;
