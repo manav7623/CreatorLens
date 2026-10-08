@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.RENDER_BACKEND_URL || 'https://creatorlens-hydg.onrender.com/api';
+const BACKEND_URL = process.env.RENDER_BACKEND_URL || process.env.BACKEND_INTERNAL_URL || 'http://localhost:5000/api';
 
 export const dynamic = 'force-dynamic';
 

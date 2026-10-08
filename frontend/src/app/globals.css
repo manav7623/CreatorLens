@@ -16,6 +16,10 @@ body { background: #0A0A0F; color: white; font-family: var(--font-syne); }
 
 button, a, [role="button"], select {
   cursor: pointer;
+  text-decoration: none !important;
+}
+a, a:hover, a:focus, a:visited {
+  text-decoration: none !important;
 }
 input, textarea {
   cursor: text;

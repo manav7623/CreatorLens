@@ -173,16 +173,53 @@ export default function DashboardPage() {
           />
         ) : (
           <div className="glass rounded-2xl p-6">
-            <h3 className="font-semibold mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              
+            <h3 className="font-semibold mb-4 text-white">Quick Actions</h3>
+            <div className="space-y-2.5">
+              <Link
+                href="/campaigns/create"
+                className="flex items-center justify-between p-3 rounded-xl bg-dark-700/80 hover:bg-primary-500/20 hover:border-primary-500/30 border border-dark-600 transition-all text-xs font-semibold text-white group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-primary-500/20 text-primary-400 flex items-center justify-center">
+                    <Briefcase size={14} />
+                  </div>
+                  <span>Create Campaign</span>
+                </div>
+                <span className="text-gray-400 group-hover:text-primary-400 font-normal">→</span>
+              </Link>
+
+              <Link
+                href="/creators"
+                className="flex items-center justify-between p-3 rounded-xl bg-dark-700/80 hover:bg-primary-500/20 hover:border-primary-500/30 border border-dark-600 transition-all text-xs font-semibold text-white group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Users size={14} />
+                  </div>
+                  <span>Find Creators</span>
+                </div>
+                <span className="text-gray-400 group-hover:text-primary-400 font-normal">→</span>
+              </Link>
+
+              <Link
+                href="/dashboard/content-review"
+                className="flex items-center justify-between p-3 rounded-xl bg-dark-700/80 hover:bg-primary-500/20 hover:border-primary-500/30 border border-dark-600 transition-all text-xs font-semibold text-white group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle size={14} />
+                  </div>
+                  <span>Review Submissions</span>
+                </div>
+                <span className="text-gray-400 group-hover:text-primary-400 font-normal">→</span>
+              </Link>
             </div>
             {stats?.recentCampaigns?.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-4 pt-3 border-t border-dark-600">
                 <p className="text-xs text-gray-500 mb-2 font-mono">RECENT CAMPAIGNS</p>
                 {stats.recentCampaigns.slice(0, 3).map(c => (
-                  <div key={c._id} className="flex items-center justify-between py-2 border-b border-dark-600 last:border-0">
-                    <div className="text-sm truncate flex-1">{c.title}</div>
+                  <div key={c._id} className="flex items-center justify-between py-2 border-b border-dark-600/60 last:border-0">
+                    <div className="text-xs truncate flex-1 font-medium">{c.title}</div>
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       <Eye size={12} />
                       {c.views}
@@ -199,15 +236,15 @@ export default function DashboardPage() {
       {isCreator && (!profile?.socialLinks?.instagram?.username && !profile?.socialLinks?.youtube?.username) && (
         <div className="glass rounded-2xl p-6 border border-yellow-500/30">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
               <Zap size={22} className="text-yellow-400" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1">Complete Your Profile</h3>
-              <p className="text-gray-400 text-sm mb-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold mb-1 text-white">Complete Your Profile</h3>
+              <p className="text-gray-400 text-xs sm:text-sm mb-4">
                 Add your social media links to generate your AI authenticity score and get discovered by brands.
               </p>
-              <Link href="/dashboard/profile" className="btn-accent text-sm px-4 py-2">
+              <Link href="/dashboard/profile" className="btn-accent text-xs sm:text-sm px-4 py-2 rounded-xl inline-block font-semibold">
                 Setup Profile →
               </Link>
             </div>
@@ -215,14 +252,5 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function Megaphone({ size, className }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 11l19-9-9 19-2-8-8-2z" />
-    </svg>
   );
 }

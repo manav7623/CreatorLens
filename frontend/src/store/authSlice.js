@@ -7,8 +7,8 @@ export const login = createAsyncThunk('auth/login', async (credentials, { reject
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -22,8 +22,8 @@ export const register = createAsyncThunk('auth/register', async (userData, { rej
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -36,7 +36,7 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
     const { data } = await api.put('/users/profile', profileData);
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.removeItem('user');
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
   } catch (err) {
@@ -47,8 +47,8 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (profi
 const getInitialSession = () => {
   if (typeof window !== 'undefined') {
     try {
-      const user = sessionStorage.getItem('user');
-      const token = sessionStorage.getItem('token');
+      const user = sessionStorage.getItem('user') || localStorage.getItem('user');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (user && token) {
         return { user: JSON.parse(user), token, isInitialized: true };
       }

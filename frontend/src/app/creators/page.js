@@ -107,104 +107,104 @@ function CreatorCard({ creator }) {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {showDetail && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowDetail(false)}>
-          <div className="glass rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div className="flex items-start gap-4">
-                <img
-                  src={creator.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=4F63FF&color=fff&size=80`}
-                  className="w-20 h-20 rounded-2xl object-cover ring-1 ring-primary-500/30"
-                />
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-2xl font-bold">{creator.name}</h2>
-                    {creator.isVerified && <Shield size={18} className="text-green-400" />}
+        {/* Detail Modal */}
+        {showDetail && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4" onClick={() => setShowDetail(false)}>
+            <div className="glass bg-dark-900 border border-dark-600 rounded-3xl p-5 sm:p-7 w-full max-w-2xl max-h-[88vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
+                <div className="flex items-start gap-3.5 sm:gap-4">
+                  <img
+                    src={creator.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=4F63FF&color=fff&size=80`}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-1 ring-primary-500/30 flex-shrink-0"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h2 className="text-xl sm:text-2xl font-bold text-white">{creator.name}</h2>
+                      {creator.isVerified && <Shield size={16} className="text-green-400" />}
+                    </div>
+                    {p.location && <div className="text-gray-400 text-xs sm:text-sm flex items-center gap-1"><MapPin size={13} />{p.location}</div>}
+                    <p className="text-gray-300 text-xs sm:text-sm mt-1.5 leading-relaxed">{p.bio}</p>
                   </div>
-                  {p.location && <div className="text-gray-400 text-sm flex items-center gap-1"><MapPin size={14} />{p.location}</div>}
-                  <p className="text-gray-300 text-sm mt-2">{p.bio}</p>
                 </div>
+
+                <Link
+                  href={`/messages?user=${creatorId}`}
+                  className="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-md w-full sm:w-auto flex-shrink-0 font-semibold"
+                >
+                  <MessageSquare size={14} /> Message Creator
+                </Link>
               </div>
 
-              <Link
-                href={`/messages?user=${creatorId}`}
-                className="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-md flex-shrink-0"
-              >
-                <MessageSquare size={15} /> Message Creator
-              </Link>
-            </div>
+              {/* Detailed Analytics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-6">
+                {[
+                  { label: 'AI Score', value: `${p.aiScore || 0}/100`, color: scoreColor },
+                  { label: 'Followers', value: (p.totalFollowers || 0).toLocaleString(), color: 'text-blue-400' },
+                  { label: 'Engagement', value: `${p.engagementRate || 0}%`, color: 'text-green-400' },
+                  { label: 'Fake Followers', value: `${p.fakeFollowerPercentage || 0}%`, color: (p.fakeFollowerPercentage || 0) < 20 ? 'text-green-400' : 'text-red-400' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-dark-700 rounded-xl p-2.5 sm:p-3 text-center">
+                    <div className={`text-base sm:text-xl font-bold ${color}`}>{value}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
 
-            {/* Detailed Analytics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {[
-                { label: 'AI Score', value: `${p.aiScore || 0}/100`, color: scoreColor },
-                { label: 'Total Followers', value: (p.totalFollowers || 0).toLocaleString(), color: 'text-blue-400' },
-                { label: 'Engagement', value: `${p.engagementRate || 0}%`, color: 'text-green-400' },
-                { label: 'Fake Followers', value: `${p.fakeFollowerPercentage || 0}%`, color: (p.fakeFollowerPercentage || 0) < 20 ? 'text-green-400' : 'text-red-400' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-dark-700 rounded-xl p-3 text-center">
-                  <div className={`text-xl font-bold ${color}`}>{value}</div>
-                  <div className="text-xs text-gray-500">{label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Audience Locations */}
-            {p.audienceLocations?.length > 0 && (
-              <div className="mb-6">
-                <h4 className="font-semibold mb-3 text-sm text-gray-400">AUDIENCE LOCATIONS</h4>
-                <div className="space-y-2">
-                  {p.audienceLocations.slice(0, 4).map(loc => (
-                    <div key={loc.country} className="flex items-center gap-3">
-                      <span className="text-sm w-16 text-gray-400">{loc.country}</span>
-                      <div className="flex-1 bg-dark-700 rounded-full h-2">
-                        <div
-                          className="bg-primary-500 h-2 rounded-full"
-                          style={{ width: `${loc.percentage}%` }}
-                        />
+              {/* Audience Locations */}
+              {p.audienceLocations?.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold mb-2.5 text-xs text-gray-400 font-mono uppercase tracking-wider">AUDIENCE LOCATIONS</h4>
+                  <div className="space-y-2">
+                    {p.audienceLocations.slice(0, 4).map(loc => (
+                      <div key={loc.country} className="flex items-center gap-3">
+                        <span className="text-xs sm:text-sm w-16 text-gray-400">{loc.country}</span>
+                        <div className="flex-1 bg-dark-700 rounded-full h-2">
+                          <div
+                            className="bg-primary-500 h-2 rounded-full"
+                            style={{ width: `${loc.percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs sm:text-sm text-gray-400 w-8 text-right">{loc.percentage}%</span>
                       </div>
-                      <span className="text-sm text-gray-400 w-8">{loc.percentage}%</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Social Platforms */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-2.5 text-xs text-gray-400 font-mono uppercase tracking-wider">CONNECTED PLATFORMS</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {p.socialLinks?.instagram?.username && (
+                    <div className="bg-dark-700 rounded-xl p-3 flex items-center gap-2.5">
+                      <Instagram size={18} className="text-pink-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs sm:text-sm font-medium truncate">@{p.socialLinks.instagram.username}</div>
+                        <div className="text-[11px] text-gray-400">{(p.socialLinks.instagram.followers || 0).toLocaleString()} followers</div>
+                      </div>
                     </div>
-                  ))}
+                  )}
+                  {p.socialLinks?.youtube?.username && (
+                    <div className="bg-dark-700 rounded-xl p-3 flex items-center gap-2.5">
+                      <Youtube size={18} className="text-red-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs sm:text-sm font-medium truncate">{p.socialLinks.youtube.username}</div>
+                        <div className="text-[11px] text-gray-400">{(p.socialLinks.youtube.subscribers || 0).toLocaleString()} subscribers</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Social Platforms */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-sm text-gray-400">SOCIAL PLATFORMS</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {p.socialLinks?.instagram?.username && (
-                  <div className="bg-dark-700 rounded-xl p-3 flex items-center gap-2">
-                    <Instagram size={18} className="text-pink-400" />
-                    <div>
-                      <div className="text-sm">@{p.socialLinks.instagram.username}</div>
-                      <div className="text-xs text-gray-400">{(p.socialLinks.instagram.followers || 0).toLocaleString()} followers</div>
-                    </div>
-                  </div>
-                )}
-                {p.socialLinks?.youtube?.username && (
-                  <div className="bg-dark-700 rounded-xl p-3 flex items-center gap-2">
-                    <Youtube size={18} className="text-red-400" />
-                    <div>
-                      <div className="text-sm">{p.socialLinks.youtube.username}</div>
-                      <div className="text-xs text-gray-400">{(p.socialLinks.youtube.subscribers || 0).toLocaleString()} subscribers</div>
-                    </div>
-                  </div>
-                )}
+              <div className="flex gap-2.5 pt-3 border-t border-dark-600">
+                <button onClick={() => setShowDetail(false)} className="btn-secondary flex-1 py-2.5 text-xs sm:text-sm rounded-xl">Close</button>
+                <Link href={`/messages?user=${creatorId}`} className="btn-primary flex-1 py-2.5 text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 font-semibold">
+                  <MessageSquare size={15} /> Chat Directly
+                </Link>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button onClick={() => setShowDetail(false)} className="btn-secondary flex-1">Close</button>
-              <Link href={`/messages?user=${creatorId}`} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <MessageSquare size={16} /> Chat Directly
-              </Link>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 }
@@ -240,33 +240,33 @@ export default function CreatorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-1">Find Creators</h1>
-        <p className="text-gray-400">{total} verified creators ready to collaborate</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1">Find Creators</h1>
+        <p className="text-gray-400 text-xs sm:text-sm">{total} verified creators ready to collaborate</p>
       </div>
 
       {/* Filters */}
-      <div className="glass rounded-2xl p-4 space-y-3">
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-48 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+      <div className="glass rounded-2xl p-3.5 sm:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
-              className="input-field py-2.5 text-sm"
+              className="input-field py-2.5 text-xs sm:text-sm rounded-xl"
               style={{ paddingLeft: '2.5rem' }}
-              placeholder="Search creators..."
+              placeholder="Search creators by name or niche..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
 
-          <select className="input-field py-2.5 text-sm w-40" value={filters.niche} onChange={e => setFilters({ ...filters, niche: e.target.value })}>
+          <select className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-36 rounded-xl" value={filters.niche} onChange={e => setFilters({ ...filters, niche: e.target.value })}>
             <option value="">All Niches</option>
             {NICHES.map(n => <option key={n}>{n}</option>)}
           </select>
 
-          <input type="number" className="input-field py-2.5 text-sm w-36" placeholder="Min Followers" value={filters.minFollowers} onChange={e => setFilters({ ...filters, minFollowers: e.target.value })} />
-          <input type="number" className="input-field py-2.5 text-sm w-36" placeholder="Min Engagement%" value={filters.minEngagement} onChange={e => setFilters({ ...filters, minEngagement: e.target.value })} />
+          <input type="number" className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-32 rounded-xl" placeholder="Min Followers" value={filters.minFollowers} onChange={e => setFilters({ ...filters, minFollowers: e.target.value })} />
+          <input type="number" className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-32 rounded-xl" placeholder="Min ER%" value={filters.minEngagement} onChange={e => setFilters({ ...filters, minEngagement: e.target.value })} />
 
-          <select className="input-field py-2.5 text-sm w-40" value={filters.sort} onChange={e => setFilters({ ...filters, sort: e.target.value })}>
+          <select className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-36 rounded-xl" value={filters.sort} onChange={e => setFilters({ ...filters, sort: e.target.value })}>
             <option value="aiScore">Sort: AI Score</option>
             <option value="followers">Sort: Followers</option>
             <option value="engagement">Sort: Engagement</option>

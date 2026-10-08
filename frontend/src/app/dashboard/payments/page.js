@@ -377,39 +377,53 @@ export default function BrandPaymentsPage() {
             {payments.map(p => {
               const cfg = statusConfig[p.status] || statusConfig.pending;
               return (
-                <div key={p._id} className="p-5 flex items-center gap-4">
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(p.creator?.name || 'C')}&background=22223A&color=4F63FF&size=44`}
-                    className="w-11 h-11 rounded-xl flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold">{p.creator?.name}</div>
-                    <div className="text-xs text-gray-500 font-mono">{p.transactionId}</div>
-                    <div className="text-xs text-gray-400">{p.campaign?.title}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg">₹{p.amount?.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">Creator: ₹{p.creatorAmount?.toLocaleString()}</div>
-                  </div>
-                  <span className={`text-xs px-3 py-1.5 rounded-xl font-mono whitespace-nowrap ${cfg.bg} ${cfg.color}`}>
-                    {cfg.label}
-                  </span>
-                  {p.status === 'held' && (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleRelease(p._id, p.creator?.name, p.creatorAmount)}
-                        className="text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 px-3 py-2 rounded-xl transition-all flex items-center gap-1"
-                      >
-                        <CheckCircle size={13} /> Release
-                      </button>
-                      <button
-                        onClick={() => handleRefund(p._id)}
-                        className="text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-2 rounded-xl transition-all flex items-center gap-1"
-                      >
-                        <RefreshCw size={13} /> Refund
-                      </button>
+                <div key={p._id} className="p-4 sm:p-5 hover:bg-dark-750/50 transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(p.creator?.name || 'C')}&background=22223A&color=4F63FF&size=44`}
+                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex-shrink-0 object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between sm:justify-start gap-2">
+                          <span className="font-semibold text-sm sm:text-base text-white truncate">{p.creator?.name}</span>
+                          <span className={`sm:hidden text-[10px] px-2 py-0.5 rounded-lg font-mono font-medium ${cfg.bg} ${cfg.color}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">{p.campaign?.title}</div>
+                        <div className="text-[11px] text-gray-500 font-mono mt-0.5 truncate">{p.transactionId}</div>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3.5 pt-2 sm:pt-0 border-t border-dark-600/60 sm:border-0">
+                      <div className="text-left sm:text-right">
+                        <div className="font-bold text-base sm:text-lg text-white">₹{p.amount?.toLocaleString()}</div>
+                        <div className="text-[11px] text-gray-400">Creator: ₹{p.creatorAmount?.toLocaleString()}</div>
+                      </div>
+
+                      <span className={`hidden sm:inline-block text-xs px-3 py-1.5 rounded-xl font-mono whitespace-nowrap ${cfg.bg} ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+
+                      {p.status === 'held' && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleRelease(p._id, p.creator?.name, p.creatorAmount)}
+                            className="text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 px-3 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1 font-semibold"
+                          >
+                            <CheckCircle size={13} /> Release
+                          </button>
+                          <button
+                            onClick={() => handleRefund(p._id)}
+                            className="text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-3 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1"
+                          >
+                            <RefreshCw size={13} /> Refund
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}

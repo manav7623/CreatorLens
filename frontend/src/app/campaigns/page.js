@@ -67,20 +67,20 @@ function CampaignCard({ campaign }) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-dark-700 rounded-xl p-3 text-center">
-            <div className="text-sm font-bold text-green-400">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+          <div className="bg-dark-700 rounded-xl p-2.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-sm font-bold text-green-400 truncate">
               ₹{campaign.budget?.min?.toLocaleString()} - ₹{campaign.budget?.max?.toLocaleString()}
             </div>
-            <div className="text-xs text-gray-500">Budget</div>
+            <div className="text-[10px] sm:text-xs text-gray-500">Budget</div>
           </div>
-          <div className="bg-dark-700 rounded-xl p-3 text-center">
-            <div className="text-sm font-bold text-blue-400">{campaign.requirements?.minFollowers?.toLocaleString()}+</div>
-            <div className="text-xs text-gray-500">Min Followers</div>
+          <div className="bg-dark-700 rounded-xl p-2.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-sm font-bold text-blue-400 truncate">{campaign.requirements?.minFollowers?.toLocaleString()}+</div>
+            <div className="text-[10px] sm:text-xs text-gray-500">Min Followers</div>
           </div>
-          <div className="bg-dark-700 rounded-xl p-3 text-center">
-            <div className="text-sm font-bold text-purple-400">{campaign.applications?.length || 0}</div>
-            <div className="text-xs text-gray-500">Applied</div>
+          <div className="bg-dark-700 rounded-xl p-2.5 sm:p-3 text-center">
+            <div className="text-xs sm:text-sm font-bold text-purple-400">{campaign.applications?.length || 0}</div>
+            <div className="text-[10px] sm:text-xs text-gray-500">Applied</div>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ function CampaignCard({ campaign }) {
 
         {user?.role === 'creator' && (
           <div className="flex gap-2">
-            <button onClick={() => setShowModal(true)} className="btn-primary flex-1 text-sm py-2.5 rounded-xl font-semibold">
+            <button onClick={() => setShowModal(true)} className="btn-primary flex-1 text-xs sm:text-sm py-2.5 rounded-xl font-semibold">
               Apply Now →
             </button>
             <Link
@@ -109,37 +109,37 @@ function CampaignCard({ campaign }) {
 
       {/* Apply Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass rounded-2xl p-6 w-full max-w-lg">
-            <h3 className="font-bold text-xl mb-2">Apply to Campaign</h3>
-            <p className="text-gray-400 text-sm mb-6">{campaign.title}</p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="glass bg-dark-900 border border-dark-600 rounded-3xl p-5 sm:p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h3 className="font-bold text-lg sm:text-xl mb-1 text-white">Apply to Campaign</h3>
+            <p className="text-gray-400 text-xs sm:text-sm mb-5">{campaign.title}</p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Your Proposal</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1.5">Your Proposal *</label>
                 <textarea
-                  className="input-field h-28 resize-none"
+                  className="input-field h-24 sm:h-28 text-xs sm:text-sm resize-none rounded-xl"
                   placeholder="Explain why you're the perfect fit for this campaign..."
                   value={proposal.proposal}
                   onChange={e => setProposal({ ...proposal, proposal: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Proposed Rate (₹)</label>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">Proposed Rate (₹) *</label>
                   <input
                     type="number"
-                    className="input-field"
+                    className="input-field text-xs sm:text-sm py-2.5 rounded-xl"
                     placeholder="10000"
                     value={proposal.proposedRate}
                     onChange={e => setProposal({ ...proposal, proposedRate: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Timeline</label>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">Timeline</label>
                   <input
-                    className="input-field"
+                    className="input-field text-xs sm:text-sm py-2.5 rounded-xl"
                     placeholder="e.g. 7 days"
                     value={proposal.timeline}
                     onChange={e => setProposal({ ...proposal, timeline: e.target.value })}
@@ -148,9 +148,9 @@ function CampaignCard({ campaign }) {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={handleApply} disabled={applying || !proposal.proposal || !proposal.proposedRate} className="btn-primary flex-1">
+            <div className="flex gap-2.5 mt-6 pt-3 border-t border-dark-600">
+              <button onClick={() => setShowModal(false)} className="btn-secondary flex-1 py-2.5 text-xs sm:text-sm rounded-xl">Cancel</button>
+              <button onClick={handleApply} disabled={applying || !proposal.proposal || !proposal.proposedRate} className="btn-primary flex-1 py-2.5 text-xs sm:text-sm rounded-xl font-semibold">
                 {applying ? 'Submitting...' : 'Submit Application'}
               </button>
             </div>
@@ -190,16 +190,16 @@ export default function CampaignsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-1">Browse Campaigns</h1>
-        <p className="text-gray-400">{total} active campaigns waiting for you</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1">Browse Campaigns</h1>
+        <p className="text-gray-400 text-xs sm:text-sm">{total} active campaigns waiting for you</p>
       </div>
 
       {/* Search & Filters */}
-      <div className="glass rounded-2xl p-4 flex flex-wrap gap-3">
-        <div className="flex-1 min-w-48 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+      <div className="glass rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
+        <div className="flex-1 min-w-[200px] relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
-            className="input-field py-2.5 text-sm"
+            className="input-field py-2.5 text-xs sm:text-sm rounded-xl"
             style={{ paddingLeft: '2.5rem' }}
             placeholder="Search campaigns..."
             value={search}
@@ -208,7 +208,7 @@ export default function CampaignsPage() {
         </div>
 
         <select
-          className="input-field py-2.5 text-sm w-40"
+          className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-36 rounded-xl"
           value={filters.niche}
           onChange={e => setFilters({ ...filters, niche: e.target.value })}
         >
@@ -217,7 +217,7 @@ export default function CampaignsPage() {
         </select>
 
         <select
-          className="input-field py-2.5 text-sm w-40"
+          className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-36 rounded-xl"
           value={filters.platform}
           onChange={e => setFilters({ ...filters, platform: e.target.value })}
         >
@@ -229,7 +229,7 @@ export default function CampaignsPage() {
 
         <input
           type="number"
-          className="input-field py-2.5 text-sm w-36"
+          className="input-field py-2.5 text-xs sm:text-sm w-full sm:w-32 rounded-xl"
           placeholder="Min Budget ₹"
           value={filters.minBudget}
           onChange={e => setFilters({ ...filters, minBudget: e.target.value })}
