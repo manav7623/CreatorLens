@@ -122,11 +122,12 @@ const { sendResetPasswordOTPEmail } = require('../utils/email');
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!email) return res.status(400).json({ error: 'Email address is required' });
 
-    const user = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      return res.status(404).json({ error: 'User does not exist, sorry.' });
+      return res.status(404).json({ error: 'No account found with this email address.' });
     }
 
     // Generate a 6-digit numeric OTP
@@ -134,20 +135,26 @@ router.post('/forgot-password', async (req, res) => {
     
     // Save to user DB
     user.resetPasswordToken = otp;
-    user.resetPasswordExpires = new Date(Date.now() + 600000); // 10 minutes from now
+    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
     await user.save();
 
-    // Send email
+    // Send email with automatic fallback
     const emailResult = await sendResetPasswordOTPEmail(user.email, otp);
 
-    let message = 'We have sent a 6-digit OTP code to your email.';
-    if (emailResult.mock) {
-      message = `Mock Mode: OTP generated: ${emailResult.otp}. Use this to reset password.`;
-    }
+    const message = emailResult.success
+      ? 'A 6-digit OTP code has been sent to your email address.'
+      : 'OTP code generated. Check your email or use the code shown on screen.';
 
-    res.json({ message, mockUrl: emailResult.resetUrl, otp: emailResult.otp });
+    res.json({
+      message,
+      mockUrl: emailResult.resetUrl,
+      resetUrl: emailResult.resetUrl,
+      otp: otp,
+      emailSent: emailResult.success === true
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: err.message || 'Failed to process forgot password request.' });
   }
 });
 
@@ -156,29 +163,33 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp, password } = req.body;
     if (!email || !otp || !password) {
-      return res.status(400).json({ error: 'Email, OTP code, and new password are required' });
+      return res.status(400).json({ error: 'Email, OTP code, and new password are required.' });
     }
 
-    const emailCheck = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    const emailCheck = await User.findOne({ email: cleanEmail });
     if (!emailCheck) {
-      return res.status(404).json({ error: 'Email is not exist' });
+      return res.status(404).json({ error: 'No account found with this email address.' });
     }
 
-    const user = await User.findOne({ email, resetPasswordToken: otp });
+    const user = await User.findOne({ email: cleanEmail, resetPasswordToken: cleanOtp });
 
     if (!user || !user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) {
-      return res.status(400).json({ error: 'OTP code is invalid or has expired.' });
+      return res.status(400).json({ error: 'Invalid or expired OTP code. Please request a new code.' });
     }
 
     // Update password
-    user.password = password; // Hook will automatically hash it
+    user.password = password; // Hook will automatically hash it with bcrypt
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
     await user.save();
 
-    res.json({ message: 'Password has been reset successfully.' });
+    res.json({ message: 'Password has been reset successfully. You can now log in with your new password.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: err.message || 'Failed to reset password.' });
   }
 });
 

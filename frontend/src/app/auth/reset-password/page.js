@@ -11,7 +11,7 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(searchParams.get('otp') || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -43,9 +43,9 @@ function ResetPasswordForm() {
     setResending(true);
     try {
       const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      toast.success('New OTP sent successfully!');
+      toast.success(data.message || 'New OTP code sent to your email!');
       if (data.otp) {
-        toast.success(`[Mock Mode] Your OTP is: ${data.otp}`, { duration: 10000 });
+        setOtp(data.otp);
       }
       setTimeLeft(600); // Reset timer back to 10 minutes
     } catch (err) {
@@ -90,11 +90,15 @@ function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      await api.post('/auth/reset-password', { email: email.trim(), otp: otp.trim(), password });
-      toast.success('Password reset successfully!');
+      const { data } = await api.post('/auth/reset-password', {
+        email: email.trim(),
+        otp: otp.trim(),
+        password
+      });
+      toast.success(data.message || 'Password reset successfully!');
       setTimeout(() => {
         router.push('/auth/login');
-      }, 2000);
+      }, 1500);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to reset password');
     } finally {

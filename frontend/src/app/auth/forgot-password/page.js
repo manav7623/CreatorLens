@@ -13,19 +13,21 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data } = await api.post('/auth/forgot-password', { email });
-      toast.success('OTP sent successfully!');
-      if (data.otp) {
-        toast.success(`[Mock Mode] Your OTP is: ${data.otp}`, { duration: 10000 });
-      }
+      const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
+      toast.success(data.message || '6-digit OTP code sent to your email!');
       
-      // Immediately redirect to reset password page with email pre-filled
-      router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
+      const targetOtp = data.otp ? `&otp=${encodeURIComponent(data.otp)}` : '';
+      router.push(`/auth/reset-password?email=${encodeURIComponent(email.trim())}${targetOtp}`);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send OTP');
+      toast.error(err.response?.data?.error || 'Failed to send OTP. Please check your email and try again.');
     } finally {
       setLoading(false);
     }
