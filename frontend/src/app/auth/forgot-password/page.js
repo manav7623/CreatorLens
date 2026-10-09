@@ -22,10 +22,9 @@ export default function ForgotPasswordPage() {
 
     try {
       const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      toast.success(data.message || '6-digit OTP code sent to your email!');
+      toast.success(data.message || '6-digit OTP code sent to your email! Please check your inbox.');
       
-      const targetOtp = data.otp ? `&otp=${encodeURIComponent(data.otp)}` : '';
-      router.push(`/auth/reset-password?email=${encodeURIComponent(email.trim())}${targetOtp}`);
+      router.push(`/auth/reset-password?email=${encodeURIComponent(email.trim())}`);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to send OTP. Please check your email and try again.');
     } finally {

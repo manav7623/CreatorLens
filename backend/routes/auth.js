@@ -163,7 +163,7 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(404).json({ error: 'No account found with this email address.' });
     }
 
-    // Generate a 6-digit numeric OTP
+    // Generate a secure 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Save to user DB
@@ -171,19 +171,19 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
     await user.save();
 
-    // Send email with automatic fallback
+    // Send email to user
     const emailResult = await sendResetPasswordOTPEmail(user.email, otp);
 
-    const message = emailResult.success
-      ? 'A 6-digit OTP code has been sent to your email address.'
-      : 'OTP code generated. Check your email or use the code shown on screen.';
+    if (!emailResult.success) {
+      console.error('[Forgot Password Error] Failed to send email to user:', emailResult.error);
+      return res.status(500).json({ 
+        error: 'Unable to send OTP email at the moment. Please ensure your email address is valid and try again.' 
+      });
+    }
 
     res.json({
-      message,
-      mockUrl: emailResult.resetUrl,
-      resetUrl: emailResult.resetUrl,
-      otp: otp,
-      emailSent: emailResult.success === true
+      message: 'A 6-digit OTP code has been sent to your email address.',
+      emailSent: true
     });
   } catch (err) {
     console.error('Forgot password error:', err);
@@ -213,6 +213,10 @@ router.post('/reset-password', async (req, res) => {
 
     if (!user.resetPasswordExpires || new Date(user.resetPasswordExpires).getTime() < Date.now()) {
       return res.status(400).json({ error: 'OTP code has expired. Please request a new code.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
     // Update password

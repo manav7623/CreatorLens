@@ -11,7 +11,7 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [otp, setOtp] = useState(searchParams.get('otp') || '');
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -23,9 +23,7 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     const paramEmail = searchParams.get('email');
-    const paramOtp = searchParams.get('otp');
     if (paramEmail && !email) setEmail(paramEmail);
-    if (paramOtp && !otp) setOtp(paramOtp);
   }, [searchParams]);
 
   useEffect(() => {
@@ -50,10 +48,8 @@ function ResetPasswordForm() {
     setResending(true);
     try {
       const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      toast.success(data.message || 'New OTP code sent to your email!');
-      if (data.otp) {
-        setOtp(data.otp);
-      }
+      toast.success(data.message || 'New OTP code sent to your email! Please check your inbox.');
+      setOtp('');
       setTimeLeft(600); // Reset timer back to 10 minutes
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to resend OTP.');
@@ -137,17 +133,21 @@ function ResetPasswordForm() {
       </div>
 
       <div>
-        <label className="block text-sm text-gray-400 mb-2">6-Digit OTP Code</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm text-gray-400">6-Digit OTP Code</label>
+          <span className="text-xs text-primary-400 font-medium">Sent to your email</span>
+        </div>
         <div className="relative">
           <input
             type="text"
             maxLength={6}
-            className="input-field"
+            className="input-field tracking-widest font-mono text-base font-semibold"
             style={{ paddingLeft: '2.75rem' }}
-            placeholder="123456"
+            placeholder="Enter 6-digit OTP"
             value={otp}
             onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
             required
+            autoFocus
           />
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
             <Key size={18} />

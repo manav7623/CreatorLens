@@ -2,7 +2,7 @@ require('dotenv').config();
 const nodemailer = require('nodemailer');
 
 const DEFAULT_EMAIL_USER = 'creatorlens.official03@gmail.com';
-const DEFAULT_EMAIL_PASS = 'hlqsuorqkyqrimmv'; // Verified Google App Password
+const DEFAULT_EMAIL_PASS = 'hlqsuorqkyqrimmv'; // Google App Password
 
 function getCleanClientUrl() {
   let clientUrl = process.env.CLIENT_URL || 'https://creator-lens-mu.vercel.app';
@@ -30,50 +30,76 @@ function isValidEmail(email) {
 }
 
 const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
-  // Method 1: Gmail direct SSL on Port 465 (Fastest & most reliable for Gmail App Passwords)
+  const errors = [];
+
+  // Method 1: Gmail direct SSL on Port 465 with IPv4 force (fastest & most reliable on cloud)
   try {
-    const transporterGmail = nodemailer.createTransport({
-      service: 'gmail',
+    const transporter465 = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
+      family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 10000
+      connectionTimeout: 12000,
+      greetingTimeout: 12000,
+      socketTimeout: 15000
     });
-    const info = await transporterGmail.sendMail(mailOptions);
-    console.log(`[Email Service Gmail/465] Sent to ${mailOptions.to}. Response: ${info.response}`);
+    const info = await transporter465.sendMail(mailOptions);
+    console.log(`[Email Service Port 465] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (errGmail) {
-    console.warn(`[Email Service Gmail/465 warning]: ${errGmail.message}. Trying SMTP Port 587 fallback...`);
+  } catch (err465) {
+    console.warn(`[Email Service Port 465 Warning]: ${err465.message}. Trying Port 587 STARTTLS...`);
+    errors.push(`Port 465: ${err465.message}`);
   }
 
-  // Method 2: SMTP Port 587 with STARTTLS fallback
+  // Method 2: SMTP Port 587 with STARTTLS and IPv4 force
   try {
     const transporter587 = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      requireTLS: true,
+      family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 10000
+      connectionTimeout: 12000,
+      greetingTimeout: 12000,
+      socketTimeout: 15000
     });
     const info = await transporter587.sendMail(mailOptions);
-    console.log(`[Email Service 587] Sent to ${mailOptions.to}. Response: ${info.response}`);
+    console.log(`[Email Service Port 587] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err587) {
-    console.warn(`[Email Service 587 warning]: ${err587.message}`);
-    throw err587;
+    console.warn(`[Email Service Port 587 Warning]: ${err587.message}. Trying service 'gmail'...`);
+    errors.push(`Port 587: ${err587.message}`);
   }
+
+  // Method 3: Standard Gmail service transporter with IPv4
+  try {
+    const transporterService = nodemailer.createTransport({
+      service: 'gmail',
+      family: 4,
+      auth: { user: senderEmail, pass: senderPass },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 12000,
+      greetingTimeout: 12000,
+      socketTimeout: 15000
+    });
+    const info = await transporterService.sendMail(mailOptions);
+    console.log(`[Email Service Gmail Service] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (errService) {
+    console.warn(`[Email Service Gmail Service Warning]: ${errService.message}`);
+    errors.push(`Gmail Service: ${errService.message}`);
+  }
+
+  throw new Error(`All email transports failed: ${errors.join(' | ')}`);
 };
 
 const sendResetPasswordOTPEmail = async (toEmail, otp) => {
   const clientBase = getCleanClientUrl();
-  const resetUrl = `${clientBase}/auth/reset-password?email=${encodeURIComponent(toEmail)}&otp=${otp}`;
+  const resetUrl = `${clientBase}/auth/reset-password?email=${encodeURIComponent(toEmail)}`;
 
   let senderEmail = isValidEmail(process.env.EMAIL_USER) ? process.env.EMAIL_USER.trim() : DEFAULT_EMAIL_USER;
   let senderPass = isValidGmailAppPassword(process.env.EMAIL_PASS) 
@@ -84,7 +110,7 @@ const sendResetPasswordOTPEmail = async (toEmail, otp) => {
     from: `"CreatorLens Support" <${senderEmail}>`,
     to: toEmail,
     subject: `Your CreatorLens Password Reset OTP: ${otp}`,
-    text: `Hello,\n\nYour 6-digit OTP code to reset your CreatorLens account password is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nAlternatively, you can reset your password directly using this link:\n${resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email.\n\nCreatorLens Team`,
+    text: `Hello,\n\nYour 6-digit OTP code to reset your CreatorLens account password is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nOpen the link below to enter your OTP and set a new password:\n${resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email.\n\nCreatorLens Team`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 30px 20px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 25px;">
@@ -95,37 +121,37 @@ const sendResetPasswordOTPEmail = async (toEmail, otp) => {
         
         <p style="font-size: 15px; color: #1e293b; line-height: 1.6; margin-bottom: 12px;">Hello,</p>
         <p style="font-size: 15px; color: #334155; line-height: 1.6;">
-          You requested to reset your password for your <strong>CreatorLens</strong> account. Please use the 6-digit One-Time Password (OTP) below to complete your reset:
+          You requested to reset your password for your <strong>CreatorLens</strong> account. Please use the 6-digit One-Time Password (OTP) below to complete your password reset:
         </p>
 
         <div style="text-align: center; margin: 30px 0;">
-          <div style="display: inline-block; background: #f0f4ff; border: 1.5px dashed #4F63FF; padding: 14px 32px; border-radius: 12px;">
-            <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #4F63FF; font-family: monospace;">
+          <div style="display: inline-block; background: #f0f4ff; border: 2px dashed #4F63FF; padding: 16px 36px; border-radius: 14px;">
+            <span style="font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #4F63FF; font-family: monospace;">
               ${otp}
             </span>
           </div>
-          <p style="font-size: 12px; color: #ef4444; font-weight: 600; margin-top: 10px;">
-            ⏳ Valid for 10 minutes only. Do not share this code with anyone.
+          <p style="font-size: 13px; color: #ef4444; font-weight: 600; margin-top: 12px;">
+            ⏳ Valid for 10 minutes only. Do not share this OTP with anyone.
           </p>
         </div>
 
         <div style="text-align: center; margin: 28px 0;">
           <a href="${resetUrl}" style="background-color: #4F63FF; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 700; display: inline-block; font-size: 14px; box-shadow: 0 4px 14px rgba(79, 99, 255, 0.35);">
-            Click Here to Reset Password
+            Go to Reset Password Page
           </a>
         </div>
 
-        <p style="font-size: 13px; color: #64748b; line-height: 1.5;">
-          Direct reset link:<br />
+        <p style="font-size: 13px; color: #64748b; line-height: 1.5; text-align: center;">
+          Reset page link:<br />
           <a href="${resetUrl}" style="color: #4F63FF; word-break: break-all; font-size: 12px;">${resetUrl}</a>
         </p>
 
         <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 25px 0 15px 0;" />
         <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 4px;">
-          If you did not request a password reset, you can safely ignore this email.
+          If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.
         </p>
         <p style="font-size: 11px; color: #cbd5e1; text-align: center; margin: 0;">
-          &copy; 2026 CreatorLens Inc. All rights reserved.
+          &copy; ${new Date().getFullYear()} CreatorLens Inc. All rights reserved.
         </p>
       </div>
     `
@@ -133,10 +159,10 @@ const sendResetPasswordOTPEmail = async (toEmail, otp) => {
 
   try {
     const result = await sendMailWithFallback(senderEmail, senderPass, mailOptions);
-    return { success: true, otp, resetUrl, messageId: result.messageId };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.warn(`[Email Service Warning] Nodemailer fallback triggered: ${error.message}`);
-    return { success: false, mock: true, otp, resetUrl, error: error.message };
+    console.error(`[Email Service Critical Error]: ${error.message}`);
+    return { success: false, error: error.message };
   }
 };
 
