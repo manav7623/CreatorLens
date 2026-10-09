@@ -48,7 +48,13 @@ function ResetPasswordForm() {
     setResending(true);
     try {
       const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      toast.success(data.message || 'New OTP code sent to your email! Please check your inbox.');
+      if (data.emailSent) {
+        toast.success(data.message || 'New OTP code sent to your email! Please check your inbox.');
+      } else if (data.demoOtp) {
+        toast.success(`New OTP Code: ${data.demoOtp}`, { duration: 12000, icon: '🔑' });
+      } else {
+        toast.success(data.message || 'New OTP code generated!');
+      }
       setOtp('');
       setTimeLeft(600); // Reset timer back to 10 minutes
     } catch (err) {

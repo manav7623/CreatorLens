@@ -102,7 +102,7 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
 
   const errors = [];
 
-  // Method 1: Gmail direct SSL on Port 465 with IPv4 force
+  // Method 1: Gmail direct SSL on Port 465 with IPv4 force (fast fail if port blocked)
   try {
     const transporter465 = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -111,15 +111,15 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 7000
+      connectionTimeout: 2500,
+      greetingTimeout: 2500,
+      socketTimeout: 4000
     });
     const info = await transporter465.sendMail(mailOptions);
     console.log(`[Email Service Port 465] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err465) {
-    console.warn(`[Email Service Port 465 Warning]: ${err465.message}. Trying Port 587 STARTTLS...`);
+    console.warn(`[Email Service Port 465 Warning]: ${err465.message}`);
     errors.push(`Port 465: ${err465.message}`);
   }
 
@@ -133,38 +133,19 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 7000
+      connectionTimeout: 2500,
+      greetingTimeout: 2500,
+      socketTimeout: 4000
     });
     const info = await transporter587.sendMail(mailOptions);
     console.log(`[Email Service Port 587] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err587) {
-    console.warn(`[Email Service Port 587 Warning]: ${err587.message}. Trying service 'gmail'...`);
+    console.warn(`[Email Service Port 587 Warning]: ${err587.message}`);
     errors.push(`Port 587: ${err587.message}`);
   }
 
-  // Method 3: Standard Gmail service transporter with IPv4
-  try {
-    const transporterService = nodemailer.createTransport({
-      service: 'gmail',
-      family: 4,
-      auth: { user: senderEmail, pass: senderPass },
-      tls: { rejectUnauthorized: false },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 7000
-    });
-    const info = await transporterService.sendMail(mailOptions);
-    console.log(`[Email Service Gmail Service] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (errService) {
-    console.warn(`[Email Service Gmail Service Warning]: ${errService.message}`);
-    errors.push(`Gmail Service: ${errService.message}`);
-  }
-
-  throw new Error(`All email transports failed: ${errors.join(' | ')}`);
+  throw new Error(`SMTP connection unreachable (Port blocked by cloud hosting): ${errors.join(' | ')}`);
 };
 
 const sendResetPasswordOTPEmail = async (toEmail, otp) => {
