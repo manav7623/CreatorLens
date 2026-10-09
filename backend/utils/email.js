@@ -29,10 +29,80 @@ function isValidEmail(email) {
   return clean.includes('@') && !clean.includes('your_gmail') && !clean.includes('placeholder') && !clean.includes('example.com');
 }
 
+// HTTPS-based email senders (Port 443 - 100% reliable on Render, Vercel, Railway, AWS)
+const sendViaResendHttp = async (toEmail, subject, html, text) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'CreatorLens <onboarding@resend.dev>',
+        to: [toEmail],
+        subject,
+        html,
+        text
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.id) {
+      console.log(`[Email Service Resend HTTPS] Sent to ${toEmail}. Message ID: ${data.id}`);
+      return { success: true, messageId: data.id };
+    }
+    console.warn(`[Email Service Resend Error]:`, data);
+  } catch (err) {
+    console.warn(`[Email Service Resend Exception]: ${err.message}`);
+  }
+  return null;
+};
+
+const sendViaBrevoHttp = async (toEmail, subject, html, text, senderEmail) => {
+  const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey.trim(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: 'CreatorLens Support', email: senderEmail },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent: html,
+        textContent: text
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.messageId) {
+      console.log(`[Email Service Brevo HTTPS] Sent to ${toEmail}. Message ID: ${data.messageId}`);
+      return { success: true, messageId: data.messageId };
+    }
+    console.warn(`[Email Service Brevo Error]:`, data);
+  } catch (err) {
+    console.warn(`[Email Service Brevo Exception]: ${err.message}`);
+  }
+  return null;
+};
+
 const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
+  // 1. Try HTTPS APIs first if configured (Bypasses all firewall port blocks)
+  const resendResult = await sendViaResendHttp(mailOptions.to, mailOptions.subject, mailOptions.html, mailOptions.text);
+  if (resendResult) return resendResult;
+
+  const brevoResult = await sendViaBrevoHttp(mailOptions.to, mailOptions.subject, mailOptions.html, mailOptions.text, senderEmail);
+  if (brevoResult) return brevoResult;
+
   const errors = [];
 
-  // Method 1: Gmail direct SSL on Port 465 with IPv4 force (fastest & most reliable on cloud)
+  // Method 1: Gmail direct SSL on Port 465 with IPv4 force
   try {
     const transporter465 = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -41,9 +111,9 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 12000,
-      greetingTimeout: 12000,
-      socketTimeout: 15000
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 7000
     });
     const info = await transporter465.sendMail(mailOptions);
     console.log(`[Email Service Port 465] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
@@ -63,9 +133,9 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 12000,
-      greetingTimeout: 12000,
-      socketTimeout: 15000
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 7000
     });
     const info = await transporter587.sendMail(mailOptions);
     console.log(`[Email Service Port 587] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
@@ -82,9 +152,9 @@ const sendMailWithFallback = async (senderEmail, senderPass, mailOptions) => {
       family: 4,
       auth: { user: senderEmail, pass: senderPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 12000,
-      greetingTimeout: 12000,
-      socketTimeout: 15000
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 7000
     });
     const info = await transporterService.sendMail(mailOptions);
     console.log(`[Email Service Gmail Service] Successfully sent to ${mailOptions.to}. Response: ${info.response || info.messageId}`);
