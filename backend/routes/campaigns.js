@@ -25,8 +25,8 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get all active campaigns (for creators to browse)
-router.get('/', auth, async (req, res) => {
+// Get all active campaigns (Publicly accessible for creators & visitors to browse)
+router.get('/', async (req, res) => {
   try {
     const { niche, platform, minBudget, maxBudget, search, page = 1, limit = 12 } = req.query;
     

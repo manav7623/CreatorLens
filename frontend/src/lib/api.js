@@ -111,13 +111,18 @@ api.interceptors.response.use(
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password');
     
     if (error.response?.status === 401 && !isAuthRoute && typeof window !== 'undefined') {
-      try {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      } catch {}
-      window.location.href = '/auth/login';
+      const pathname = window.location.pathname || '';
+      const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/messages');
+      
+      if (isProtectedRoute) {
+        try {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        } catch {}
+        window.location.href = '/auth/login';
+      }
       return Promise.reject(error);
     }
 

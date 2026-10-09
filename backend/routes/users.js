@@ -4,8 +4,8 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const { analyzeCreator } = require('../utils/aiAnalysis');
 
-// Get all creators with filters
-router.get('/creators', auth, async (req, res) => {
+// Get all creators with filters (Publicly accessible)
+router.get('/creators', async (req, res) => {
   try {
     const {
       niche, minFollowers, maxFollowers, minEngagement,

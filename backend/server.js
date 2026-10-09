@@ -19,12 +19,10 @@ const app = express();
 const server = http.createServer(app);
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    callback(null, true);
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'Accept', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Origin', 'Accept', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires'],
   optionsSuccessStatus: 200
 };
 
